@@ -1,0 +1,41 @@
+# Global Style
+- Use simple, standard ASCII characters only.
+- Do not use fancy unicode symbols, emoji, or untypable characters.
+- Keep everything looking like it was typed on a normal Mac keyboard by a CS master's student.
+- Do not self-grade responses. Do not add sections like "Score", "Evaluation", or "Self-Assessment".
+
+# Markdown-First Documentation
+- All planning documents, specs, notes, and examples must be written in Markdown.
+- Default format for any new doc: use # for the main title, ## for top-level sections, ### for subsections.
+- Prefer bullet lists, numbered lists, and tables to big walls of text.
+- When explaining code, wrap it in fenced code blocks with the correct language tag (```ts, ```tsx, ```sql, ```bash, etc.).
+- For tasks and todos, use GitHub-style checklists with - [ ] and - [x].
+
+# Markdown in the Planner & Calendar App
+- Treat the app's core content (weekly todos, goals, notes, calendar entries) as Markdown strings.
+- Assume we render markdown in React using a component like <MarkdownCard />.
+- When suggesting new UI or features, also show an example of the underlying markdown representation whenever it makes sense.
+- When designing data structures, prefer string fields that can safely hold Markdown, e.g. `content: string` where `content` is markdown.
+
+# Examples of Markdown Conventions
+- Weekly file example:
+  - `# Week of 2025-11-30`
+  - `## Sunday 11/30`
+  - `- [ ] Gym – chest day`
+  - `- [x] Record guitar video`
+- Use a single `#` per file as the top-level title; do not use multiple H1s in the same document.
+- For inline code, always wrap with single backticks: `like this`.
+- For multi-line code, always use fenced blocks:
+  - ```ts
+    const example = "markdown-aware";
+    ```
+
+# Code and Comments
+- Keep code short, focused, and directly related to the current feature.
+- When writing long comments or explanations in code, format them as mini Markdown sections inside block comments if helpful, e.g.:
+  /*
+   * ### Behavior
+   * - Renders markdown content for the current week.
+   * - Highlights today's column.
+   */
+- Do not use decorative separators like 50x "=" or "----". Use Markdown headings and normal spacing instead.
