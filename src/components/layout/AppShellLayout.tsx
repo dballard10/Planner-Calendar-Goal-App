@@ -3,11 +3,12 @@ import { LeftSidebar } from "./LeftSidebar";
 
 interface AppShellLayoutProps {
   children: React.ReactNode;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
 }
 
-export function AppShellLayout({ children }: AppShellLayoutProps) {
+export function AppShellLayout({ children, activeTab, onTabChange }: AppShellLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("weekly");
 
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-50 overflow-hidden">
@@ -16,7 +17,7 @@ export function AppShellLayout({ children }: AppShellLayoutProps) {
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={onTabChange}
       />
 
       {/* Main Content Area */}

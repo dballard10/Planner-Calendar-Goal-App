@@ -1,0 +1,72 @@
+/* Dark mode overrides for react-big-calendar */
+
+.rbc-calendar {
+  font-family: inherit;
+  color: #cbd5e1; /* slate-300 */
+}
+
+.rbc-header {
+  border-bottom: 1px solid #334155; /* slate-700 */
+  padding: 8px;
+  font-weight: 600;
+  color: #94a3b8; /* slate-400 */
+}
+
+.rbc-month-view, .rbc-time-view, .rbc-agenda-view {
+  border: 1px solid #334155; /* slate-700 */
+  background-color: #0f172a; /* slate-900 */
+}
+
+.rbc-day-bg {
+  border-left: 1px solid #1e293b; /* slate-800 */
+}
+
+.rbc-off-range-bg {
+  background-color: #1e293b; /* slate-800 */
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-top: 1px solid #1e293b; /* slate-800 */
+}
+
+.rbc-date-cell {
+  padding: 4px;
+  font-size: 0.875rem;
+}
+
+.rbc-today {
+  background-color: rgba(79, 70, 229, 0.1); /* indigo-600 with opacity */
+}
+
+.rbc-event {
+  background-color: #334155; /* slate-700 */
+  border: 1px solid #475569; /* slate-600 */
+  border-radius: 4px;
+  color: #e2e8f0; /* slate-200 */
+}
+
+.rbc-event.rbc-selected {
+  background-color: #4338ca; /* indigo-700 */
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid #1e293b; /* slate-800 */
+}
+
+.rbc-time-content {
+  border-top: 1px solid #1e293b; /* slate-800 */
+}
+
+.rbc-timeslot-group {
+  border-bottom: 1px solid #1e293b; /* slate-800 */
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #1e293b; /* slate-800 */
+}
+
+.rbc-current-time-indicator {
+  background-color: #ef4444; /* red-500 */
+}
+
+

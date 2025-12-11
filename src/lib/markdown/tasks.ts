@@ -257,6 +257,7 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
 
       tasks.push({
         id: getOrCreateId(),
+        kind: "task",
         title: parsed.title,
         status: parsed.status,
         dayIndex: currentDayIndex,

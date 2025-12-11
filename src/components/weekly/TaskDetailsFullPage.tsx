@@ -1,19 +1,38 @@
 import { IconArrowLeft } from "@tabler/icons-react";
-import type { Task, TaskStatus } from "../../types/weekly";
+import type {
+  Task,
+  TaskStatus,
+  TaskKind,
+  AnySubtype,
+  Goal,
+  Companion,
+} from "../../types/weekly";
 import TaskDetailsContent from "./TaskDetailsContent";
 
 interface TaskDetailsFullPageProps {
   task: Task;
+  goals: Goal[];
+  companions: Companion[];
   onBack: () => void;
   onStatusChange?: (status: TaskStatus) => void;
   onTitleChange?: (title: string) => void;
+  onKindChange?: (kind: TaskKind) => void;
+  onSubtypeChange?: (subtype: AnySubtype | undefined) => void;
+  onGoalChange?: (goalId: string | null) => void;
+  onCompanionsChange?: (companionIds: string[]) => void;
 }
 
 export default function TaskDetailsFullPage({
   task,
+  goals,
+  companions,
   onBack,
   onStatusChange,
   onTitleChange,
+  onKindChange,
+  onSubtypeChange,
+  onGoalChange,
+  onCompanionsChange,
 }: TaskDetailsFullPageProps) {
   return (
     <div className="flex flex-col h-full bg-slate-950 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -29,14 +48,19 @@ export default function TaskDetailsFullPage({
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto p-6 min-h-full">
-          <TaskDetailsContent 
-             task={task} 
-             onStatusChange={onStatusChange}
-             onTitleChange={onTitleChange}
+          <TaskDetailsContent
+            task={task}
+            goals={goals}
+            companions={companions}
+            onStatusChange={onStatusChange}
+            onTitleChange={onTitleChange}
+            onKindChange={onKindChange}
+            onSubtypeChange={onSubtypeChange}
+            onGoalChange={onGoalChange}
+            onCompanionsChange={onCompanionsChange}
           />
         </div>
       </div>
     </div>
   );
 }
-

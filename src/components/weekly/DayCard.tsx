@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Task, TaskStatus, Group } from "../../types/weekly";
+import type {
+  Task,
+  TaskStatus,
+  Group,
+  Goal,
+  Companion,
+} from "../../types/weekly";
 import DayCardHeader from "./DayCardHeader";
 import TaskCard from "./TaskCard";
 import AddButton from "./AddButton";
@@ -12,6 +18,8 @@ interface DayCardProps {
   date: Date;
   tasks: Task[];
   groups?: Group[];
+  goals?: Goal[];
+  companions?: Companion[];
   onUpdateTaskStatus: (id: string, status: TaskStatus) => void;
   onUpdateTaskTitle: (id: string, title: string) => void;
   onAddTask: (dayIndex: number, title: string) => void;
@@ -30,6 +38,8 @@ export default function DayCard({
   date,
   tasks,
   groups = [],
+  goals = [],
+  companions = [],
   onUpdateTaskStatus,
   onUpdateTaskTitle,
   onAddTask,
@@ -111,6 +121,8 @@ export default function DayCard({
                 <GroupCard
                   group={group}
                   tasks={groupTasks}
+                  goals={goals}
+                  companions={companions}
                   onAddTask={(gid, title) =>
                     onAddTaskToGroup(dayIndex, gid, title)
                   }
@@ -139,6 +151,8 @@ export default function DayCard({
             >
               <TaskCard
                 task={task}
+                goals={goals}
+                companions={companions}
                 onStatusChange={onUpdateTaskStatus}
                 onTitleChange={onUpdateTaskTitle}
                 onDelete={onDeleteTask}

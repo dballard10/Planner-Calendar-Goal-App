@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { IconPlus } from "@tabler/icons-react";
-import type { Task, Group } from "../../types/weekly";
+import type { Task, Group, Goal, Companion } from "../../types/weekly";
 import TaskCard from "./TaskCard";
 
 interface GroupCardProps {
   group: Group;
   tasks: Task[];
+  goals?: Goal[];
+  companions?: Companion[];
   onAddTask: (groupId: string, title: string) => void;
   onUpdateTitle: (groupId: string, title: string) => void;
   onDeleteGroup: (groupId: string) => void;
@@ -21,6 +23,8 @@ interface GroupCardProps {
 export default function GroupCard({
   group,
   tasks,
+  goals = [],
+  companions = [],
   onAddTask,
   onUpdateTitle,
   onDeleteGroup,
@@ -132,7 +136,7 @@ export default function GroupCard({
               onDeleteGroup(group.id);
             }
           }}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-slate-500 hover:text-red-400 rounded ml-auto"
+          className="opacity-0 group-hover:opacity-90 transition-opacity p-0.5 text-slate-500 hover:text-red-400 rounded ml-auto"
           aria-label="Delete group"
         >
           <svg
@@ -162,6 +166,8 @@ export default function GroupCard({
             <div key={task.id}>
               <TaskCard
                 task={task}
+                goals={goals}
+                companions={companions}
                 onStatusChange={onUpdateTaskStatus}
                 onTitleChange={onUpdateTaskTitle}
                 onDelete={onDeleteTask}
