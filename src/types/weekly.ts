@@ -1,39 +1,17 @@
 export type TaskStatus = "open" | "completed" | "cancelled" | "failed";
 
-export type TaskKind = "task" | "event";
-
-export type EventSubtype =
-  | "birthday"
-  | "holiday"
-  | "meeting"
-  | "appointment"
-  | "travel"
-  | "social"
-  | "class"
-  | "focus-block"
-  | "reminder"
-  | "work";
-
-export type TaskSubtype =
-  | "work"
-  | "personal"
-  | "chore"
-  | "errand"
-  | "health"
-  | "finance"
-  | "learning"
-  | "creative"
-  | "daily";
-
-export type AnySubtype = EventSubtype | TaskSubtype;
+export type WeeklyItemType = "task" | "event" | "birthday" | "holiday";
 
 export interface Goal {
   id: string;
   name: string;
   emoji?: string;
+  description?: string;
+  color?: string;
   imageKey?: string;
   createdAt: string; // ISO string
   archived?: boolean;
+  dueDate?: string;
 }
 
 export type CompanionRelationship =
@@ -57,8 +35,7 @@ export interface Companion {
 
 export interface Task {
   id: string;
-  kind: TaskKind;
-  subtype?: AnySubtype;
+  type: WeeklyItemType;
   title: string;
   status: TaskStatus;
   dayIndex: number; // 0 = Sunday ... 6 = Saturday
@@ -70,8 +47,9 @@ export interface Task {
     dayIndex: number; // 0-6
   };
   // New fields
-  goalId?: string | null;
+  goalIds?: string[];
   companionIds?: string[];
+  linksMarkdown?: string;
 }
 
 export interface Group {

@@ -22,7 +22,7 @@ export default function WeekHeader({ weekStart }: WeekHeaderProps) {
       remarkPlugins={[remarkGfm]}
       components={{
         p: ({ node, ...props }) => (
-          <div className="text-lg font-medium text-slate-300 mb-2" {...props} />
+          <div className="text-lg font-semibold text-slate-300" {...props} />
         ),
       }}
     >

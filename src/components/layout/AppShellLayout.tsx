@@ -11,7 +11,15 @@ export function AppShellLayout({ children, activeTab, onTabChange }: AppShellLay
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen w-full bg-slate-950 text-slate-50 overflow-hidden">
+    <div
+      className="flex h-screen w-full bg-slate-950 text-slate-50 overflow-hidden app-shell-root"
+      style={
+        {
+          "--app-left-sidebar-width": isSidebarOpen ? "260px" : "60px",
+          transition: "--app-left-sidebar-width 0.35s ease",
+        } as React.CSSProperties
+      }
+    >
       {/* Left Sidebar */}
       <LeftSidebar
         isOpen={isSidebarOpen}

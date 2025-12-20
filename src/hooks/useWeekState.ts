@@ -4,11 +4,11 @@ import type {
   Task,
   TaskStatus,
   Group,
-  TaskKind,
-  AnySubtype,
+  WeeklyItemType,
   Goal,
   Companion,
 } from "../types/weekly";
+import { GOAL_ACCENT_COLORS } from "../components/goals/goalStyles";
 
 // Helper to get the most recent Sunday
 export function getMostRecentSunday(): Date {
@@ -26,6 +26,11 @@ export function formatDateISO(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
+function generateAccentColor() {
+  const index = Math.floor(Math.random() * GOAL_ACCENT_COLORS.length);
+  return GOAL_ACCENT_COLORS[index];
+}
+
 // Mock tasks for initial state
 function createMockData(weekStart: string): {
   tasks: Task[];
@@ -38,23 +43,25 @@ function createMockData(weekStart: string): {
   const goals: Goal[] = [];
   const companions: Companion[] = [];
 
-  // Helper to add task
   const add = (
     dayIndex: number,
     title: string,
-    kind: TaskKind,
-    subtype: AnySubtype,
+    type: WeeklyItemType,
     status: TaskStatus = "open",
-    goalId?: string,
+    goalIdOrIds?: string | string[],
     companionIds?: string[]
   ) => {
-    // Basic position logic: append to end of day
     const existing = tasks.filter((t) => t.dayIndex === dayIndex).length;
+
+    const normalizedGoalIds = goalIdOrIds
+      ? Array.isArray(goalIdOrIds)
+        ? goalIdOrIds
+        : [goalIdOrIds]
+      : undefined;
 
     tasks.push({
       id: Math.random().toString(36).substring(2, 9),
-      kind,
-      subtype,
+      type,
       title,
       status,
       dayIndex,
@@ -62,7 +69,7 @@ function createMockData(weekStart: string): {
       createdAt: new Date(
         baseDate.getTime() + dayIndex * 24 * 60 * 60 * 1000
       ).toISOString(),
-      goalId,
+      goalIds: normalizedGoalIds,
       companionIds,
     });
   };
@@ -72,18 +79,24 @@ function createMockData(weekStart: string): {
     id: "goal-guitar",
     name: "Guitar",
     emoji: "🎸",
+    color: "#8b5cf6",
+    description: "Build consistency with regular practice sets.",
     createdAt: new Date().toISOString(),
   };
   const goalWorkout = {
     id: "goal-workout",
     name: "Working Out",
     emoji: "🏋️",
+    color: "#22d3ee",
+    description: "Hit strength and mobility targets three times per week.",
     createdAt: new Date().toISOString(),
   };
   const goalCareer = {
     id: "goal-career",
     name: "Career",
     emoji: "💼",
+    color: "#f97316",
+    description: "Finish key deliverables for the quarter.",
     createdAt: new Date().toISOString(),
   };
   goals.push(goalGuitar, goalWorkout, goalCareer);
@@ -94,7 +107,7 @@ function createMockData(weekStart: string): {
     name: "Sarah",
     relationship: "friend" as const,
     avatarEmoji: "👩",
-    color: "#fb7185", // rose-400
+    color: "#fb7185",
     createdAt: new Date().toISOString(),
   };
   const compMike = {
@@ -102,70 +115,160 @@ function createMockData(weekStart: string): {
     name: "Mike",
     relationship: "coworker" as const,
     avatarEmoji: "👨",
-    color: "#60a5fa", // blue-400
+    color: "#60a5fa",
     createdAt: new Date().toISOString(),
   };
   companions.push(compSarah, compMike);
 
-  // Sunday (0)
-  add(0, "Weekly planning review", "task", "work", "open", goalCareer.id);
-  add(0, "Grocery run", "task", "personal", "completed");
-  add(0, "Family Call", "event", "social");
-  add(0, "Meal prep for week", "task", "health", "open", goalWorkout.id);
-  add(0, "Relaxation time", "task", "personal");
+  const dailyTemplates: Record<
+    number,
+    Array<{
+      title: string;
+      type: WeeklyItemType;
+      status?: TaskStatus;
+      goalIds?: string[];
+      companionIds?: string[];
+    }>
+  > = {
+    0: [
+      {
+        title: "Weekly planning review",
+        type: "task",
+        status: "open",
+        goalIds: [goalCareer.id],
+      },
+      { title: "Grocery run", type: "task", status: "completed" },
+      {
+        title: "Family time - board games",
+        type: "event",
+        companionIds: [compSarah.id],
+      },
+      {
+        title: "Meal prep for the week",
+        type: "task",
+        goalIds: [goalWorkout.id],
+      },
+      {
+        title: "Relaxation + reading",
+        type: "task",
+        status: "open",
+        goalIds: [goalGuitar.id],
+      },
+    ],
+    1: [
+      {
+        title: "Team standup",
+        type: "event",
+        goalIds: [goalCareer.id],
+        companionIds: [compMike.id],
+      },
+      { title: "Email triage", type: "task", goalIds: [goalCareer.id] },
+      {
+        title: "Deep work sprint",
+        type: "event",
+        goalIds: [goalCareer.id],
+      },
+      {
+        title: "Company holiday (observed)",
+        type: "holiday",
+      },
+      {
+        title: "Evening stretch circuit",
+        type: "event",
+        goalIds: [goalWorkout.id],
+      },
+    ],
+    2: [
+      {
+        title: "Sarah's birthday brunch",
+        type: "birthday",
+        companionIds: [compSarah.id],
+      },
+      {
+        title: "Finish project proposal",
+        type: "task",
+        goalIds: [goalCareer.id],
+      },
+      {
+        title: "Focus block",
+        type: "event",
+        goalIds: [goalCareer.id],
+      },
+      {
+        title: "Evening journaling",
+        type: "task",
+      },
+    ],
+    3: [
+      { title: "Submit expenses", type: "task", goalIds: [goalCareer.id] },
+      {
+        title: "Client call",
+        type: "event",
+        companionIds: [compMike.id],
+        goalIds: [goalCareer.id],
+      },
+      { title: "Clean apartment", type: "task" },
+      {
+        title: "Code review",
+        type: "task",
+        goalIds: [goalCareer.id],
+        companionIds: [compMike.id],
+      },
+      { title: "Evening run", type: "event", goalIds: [goalWorkout.id] },
+    ],
+    4: [
+      { title: "Team sync", type: "event", companionIds: [compMike.id] },
+      { title: "Write blog post", type: "task" },
+      {
+        title: "Dinner with friends",
+        type: "event",
+        companionIds: [compSarah.id],
+      },
+    ],
+    5: [
+      {
+        title: "Wrap up weekly report",
+        type: "task",
+        goalIds: [goalCareer.id],
+      },
+      {
+        title: "Project demo",
+        type: "event",
+        goalIds: [goalCareer.id],
+        companionIds: [compMike.id],
+      },
+      { title: "Plan weekend", type: "task" },
+      {
+        title: "Happy hour",
+        type: "event",
+        companionIds: [compSarah.id, compMike.id],
+      },
+    ],
+    6: [
+      { title: "Laundry", type: "task" },
+      {
+        title: "Brunch with Sarah",
+        type: "event",
+        companionIds: [compSarah.id],
+      },
+      { title: "Long hike", type: "task", goalIds: [goalWorkout.id] },
+      { title: "Movie night", type: "event" },
+    ],
+  };
 
-  // Monday (1)
-  add(1, "Team Standup", "event", "meeting", "open", goalCareer.id, [
-    compMike.id,
-  ]);
-  add(1, "Email triage", "task", "work", "open", goalCareer.id);
-  add(1, "Deep work session", "event", "work", "open", goalCareer.id);
-  add(1, "Lunch with Sarah", "event", "social", "open", undefined, [
-    compSarah.id,
-  ]);
-  add(1, "Gym workout", "task", "health", "open", goalWorkout.id);
-
-  // Tuesday (2)
-  add(2, "Doctor Appointment", "task", "health");
-  add(2, "Finish project proposal", "task", "work", "open", goalCareer.id);
-  add(2, "Journaling", "task", "daily");
-  add(2, "Focus Block", "event", "work", "open", goalCareer.id);
-  add(2, "Read 30 mins", "task", "personal");
-
-  // Wednesday (3)
-  add(3, "Submit expenses", "task", "work", "open", goalCareer.id);
-  add(3, "Client Call", "event", "meeting", "open", goalCareer.id);
-  add(3, "Clean apartment", "task", "daily");
-  add(3, "Code review", "task", "work", "open", goalCareer.id, [compMike.id]);
-  add(3, "Evening run", "task", "health", "open", goalWorkout.id);
-
-  // Thursday (4)
-  add(4, "Make bed", "task", "daily");
-  add(4, "Write blog post", "task", "personal");
-  add(4, "Team sync", "event", "meeting", "open", goalCareer.id, [compMike.id]);
-  add(4, "Dinner w/ Friends", "event", "social", "open", undefined, [
-    compSarah.id,
-  ]);
-  add(4, "Pay bills", "task", "personal");
-
-  // Friday (5)
-  add(5, "Wrap up weekly report", "task", "work", "open", goalCareer.id);
-  add(5, "Project demo", "event", "meeting", "open", goalCareer.id, [
-    compMike.id,
-  ]);
-  add(5, "Plan weekend", "task", "personal");
-  add(5, "Happy Hour", "event", "social", "open", undefined, [
-    compSarah.id,
-    compMike.id,
-  ]);
-  add(5, "Meditate", "task", "health");
-
-  // Saturday (6)
-  add(6, "Laundry", "task", "daily");
-  add(6, "Brunch", "event", "social", "open", undefined, [compSarah.id]);
-  add(6, "Long hike", "task", "health", "open", goalWorkout.id);
-  add(6, "Painting", "task", "personal");
-  add(6, "Movie night", "event", "social");
+  Object.entries(dailyTemplates).forEach(([dayIndexStr, entries]) => {
+    const dayIndex = Number(dayIndexStr);
+    entries.forEach((entry) => {
+      add(
+        dayIndex,
+        entry.title,
+        entry.type,
+        entry.status,
+        entry.goalIds,
+        entry.companionIds
+      );
+    });
+  });
 
   return {
     tasks,
@@ -205,7 +308,7 @@ export function useWeekState() {
 
     const newTask: Task = {
       id: generateId(),
-      kind: "task",
+      type: "task",
       title: title || "New task...",
       status: "open",
       dayIndex,
@@ -257,20 +360,20 @@ export function useWeekState() {
     }));
   };
 
-  const updateTaskKind = (id: string, kind: TaskKind) => {
+  const updateTaskType = (id: string, type: WeeklyItemType) => {
     setWeekState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
-        task.id === id ? { ...task, kind } : task
+        task.id === id ? { ...task, type } : task
       ),
     }));
   };
 
-  const updateTaskSubtype = (id: string, subtype: AnySubtype | undefined) => {
+  const updateTaskLinks = (id: string, linksMarkdown?: string) => {
     setWeekState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
-        task.id === id ? { ...task, subtype } : task
+        task.id === id ? { ...task, linksMarkdown } : task
       ),
     }));
   };
@@ -305,6 +408,8 @@ export function useWeekState() {
       id: generateId(),
       name,
       emoji,
+      color: generateAccentColor(),
+      description: "",
       createdAt: new Date().toISOString(),
     };
     setWeekState((prev) => ({
@@ -328,9 +433,14 @@ export function useWeekState() {
       ...prev,
       goals: prev.goals.filter((g) => g.id !== id),
       // Unlink from tasks
-      tasks: prev.tasks.map((t) =>
-        t.goalId === id ? { ...t, goalId: undefined } : t
-      ),
+      tasks: prev.tasks.map((t) => {
+        if (!t.goalIds?.includes(id)) return t;
+        const updatedGoalIds = t.goalIds.filter((gid) => gid !== id);
+        return {
+          ...t,
+          goalIds: updatedGoalIds.length > 0 ? updatedGoalIds : undefined,
+        };
+      }),
     }));
   };
 
@@ -382,11 +492,13 @@ export function useWeekState() {
   };
 
   // --- LINKING ACTIONS ---
-  const setTaskGoal = (taskId: string, goalId: string | undefined | null) => {
+  const setTaskGoals = (taskId: string, goalIds: string[]) => {
     setWeekState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) =>
-        t.id === taskId ? { ...t, goalId: goalId || undefined } : t
+        t.id === taskId
+          ? { ...t, goalIds: goalIds.length > 0 ? goalIds : undefined }
+          : t
       ),
     }));
   };
@@ -408,8 +520,8 @@ export function useWeekState() {
       addGroup,
       updateTaskStatus,
       updateTaskTitle,
-      updateTaskKind,
-      updateTaskSubtype,
+      updateTaskType,
+      updateTaskLinks,
       deleteTask,
       updateGroupTitle,
       deleteGroup,
@@ -422,7 +534,7 @@ export function useWeekState() {
       updateCompanion,
       deleteCompanion,
       // Linking Actions
-      setTaskGoal,
+      setTaskGoals,
       setTaskCompanions,
     },
   };

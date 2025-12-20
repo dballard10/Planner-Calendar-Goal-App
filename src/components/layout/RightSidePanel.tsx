@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import type { Transition } from "framer-motion";
 import { IconMaximize, IconMinimize, IconX } from "@tabler/icons-react";
 
 interface RightSidePanelProps {
@@ -20,6 +21,13 @@ export function RightSidePanel({
   showFloatingTrigger = false,
 }: RightSidePanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [widthTargets, setWidthTargets] = useState(() => ({
+    collapsed: 384,
+    expanded: 384,
+  }));
+  const { collapsed: collapsedWidthPx, expanded: expandedWidthPx } =
+    widthTargets;
 
   // Reset expanded state when panel closes, so it opens in normal mode next time
   useEffect(() => {
@@ -27,6 +35,69 @@ export function RightSidePanel({
       setIsExpanded(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const updateWidths = () => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      const viewportWidth = window.innerWidth;
+      const rootFontSize =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const collapsed = Math.min(24 * rootFontSize, viewportWidth);
+      let sidebarWidth = 0;
+      const rootEl = panelRef.current?.closest(
+        ".app-shell-root"
+      ) as HTMLElement | null;
+      if (rootEl) {
+        const raw = getComputedStyle(rootEl).getPropertyValue(
+          "--app-left-sidebar-width"
+        );
+        const parsed = parseFloat(raw);
+        if (!Number.isNaN(parsed)) {
+          sidebarWidth = parsed;
+        }
+      }
+      if (!sidebarWidth) {
+        sidebarWidth = 260;
+      }
+      const expanded = Math.max(0, viewportWidth - sidebarWidth);
+
+      setWidthTargets((prev) => {
+        if (prev.collapsed === collapsed && prev.expanded === expanded) {
+          return prev;
+        }
+        return { collapsed, expanded };
+      });
+    };
+
+    updateWidths();
+    const handleResize = () => updateWidths();
+    window.addEventListener("resize", handleResize);
+
+    const rootEl = panelRef.current?.closest(
+      ".app-shell-root"
+    ) as HTMLElement | null;
+    const observer =
+      rootEl && "MutationObserver" in window
+        ? new MutationObserver(() => updateWidths())
+        : null;
+    if (observer && rootEl) {
+      observer.observe(rootEl, {
+        attributes: true,
+        attributeFilter: ["style"],
+      });
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      observer?.disconnect();
+    };
+  }, []);
 
   // Allow local toggle only if floating trigger is enabled and we need a way to open it
   // But typically the parent controls isOpen.
@@ -38,6 +109,18 @@ export function RightSidePanel({
   // To keep it simple and match the plan: "Remove or minimize... in favor of header-based control".
   // I will just rely on props. If floating trigger is needed, we'd need an onOpen callback.
   // Since the plan says "gate it... likely false", I'll assume we don't need it active for now.
+
+  const panelTransition: Transition = {
+    x: {
+      type: "spring",
+      damping: 25,
+      stiffness: 200,
+    },
+    width: {
+      duration: 0.45,
+      ease: "easeInOut",
+    },
+  };
 
   return (
     <>
@@ -77,17 +160,16 @@ export function RightSidePanel({
       )}
 
       <motion.div
+        layout
         initial={false}
         animate={{
           x: isOpen ? 0 : "100%",
+          width: isExpanded ? expandedWidthPx : collapsedWidthPx,
         }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className={`fixed z-50 bg-slate-900 border-l border-slate-700 shadow-2xl ${
-          isExpanded
-            ? "md:absolute md:left-0 md:right-0 w-full md:w-auto h-full inset-y-0 right-0"
-            : "fixed inset-y-0 right-0 w-full md:w-96"
-        } ${className}`}
-        style={isExpanded ? { top: 0, bottom: 0 } : undefined}
+        transition={panelTransition}
+        className={`fixed inset-y-0 right-0 z-40 bg-slate-900 border-l border-slate-700 shadow-2xl ${className}`}
+        style={{ maxWidth: "100%" }}
+        ref={panelRef}
       >
         <div className="flex flex-col h-full">
           {/* Header */}

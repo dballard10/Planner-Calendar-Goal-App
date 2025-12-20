@@ -18,6 +18,7 @@ interface GroupCardProps {
   onOpenDetailsSidePanel?: (taskId: string) => void;
   onOpenDetailsModal?: (taskId: string) => void;
   onOpenDetailsPage?: (taskId: string) => void;
+  highlightTaskId?: string | null;
 }
 
 export default function GroupCard({
@@ -34,6 +35,7 @@ export default function GroupCard({
   onOpenDetailsSidePanel,
   onOpenDetailsModal,
   onOpenDetailsPage,
+  highlightTaskId,
 }: GroupCardProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -65,9 +67,9 @@ export default function GroupCard({
   };
 
   return (
-    <div className="border border-slate-800 rounded-md bg-slate-900/20 p-2 mb-2">
+    <div className="group border border-slate-800 rounded-md bg-slate-900/20 p-2 mb-2">
       {/* Group Header */}
-      <div className="flex mt-1 items-center gap-2 pb-2 pb-2">
+      <div className="flex mt-1 items-center gap-2 pb-2">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="text-slate-400 hover:text-slate-200 transition-colors"
@@ -120,43 +122,47 @@ export default function GroupCard({
           </h4>
         )}
 
-        {/* Add Task Button for Group */}
-        <button
-          onClick={() => onAddTask(group.id, "New task...")}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-slate-400 hover:text-slate-200 rounded ml-2"
-          aria-label="Add task to group"
-        >
-          <IconPlus className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Delete Group Button (optional, could be in a menu) */}
-        <button
-          onClick={() => {
-            if (confirm("Delete this group and its tasks?")) {
-              onDeleteGroup(group.id);
-            }
-          }}
-          className="opacity-0 group-hover:opacity-90 transition-opacity p-0.5 text-slate-500 hover:text-red-400 rounded ml-auto"
-          aria-label="Delete group"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-3.5 h-3.5"
-            viewBox="0 0 24 24"
-            strokeWidth="2"
-            stroke="currentColor"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <div className="ml-auto flex items-center gap-1">
+          {/* Add Task Button for Group */}
+          <button
+            type="button"
+            onClick={() => onAddTask(group.id, "New task...")}
+            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-0.5 text-slate-400 hover:text-slate-200 rounded pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto"
+            aria-label="Add task to group"
           >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-            <path d="M4 7l16 0"></path>
-            <path d="M10 11l0 6"></path>
-            <path d="M14 11l0 6"></path>
-            <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"></path>
-            <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"></path>
-          </svg>
-        </button>
+            <IconPlus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Delete Group Button (optional, could be in a menu) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("Delete this group and its tasks?")) {
+                onDeleteGroup(group.id);
+              }
+            }}
+            className="opacity-0 group-hover:opacity-90 group-focus-within:opacity-90 transition-opacity p-0.5 text-slate-500 hover:text-red-400 rounded pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto"
+            aria-label="Delete group"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              stroke="currentColor"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+              <path d="M4 7l16 0"></path>
+              <path d="M10 11l0 6"></path>
+              <path d="M14 11l0 6"></path>
+              <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"></path>
+              <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"></path>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Group Tasks */}
@@ -168,6 +174,7 @@ export default function GroupCard({
                 task={task}
                 goals={goals}
                 companions={companions}
+                isHighlighted={task.id === highlightTaskId}
                 onStatusChange={onUpdateTaskStatus}
                 onTitleChange={onUpdateTaskTitle}
                 onDelete={onDeleteTask}

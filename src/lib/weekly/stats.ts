@@ -19,7 +19,15 @@ export interface WeekStats {
   byDay: DayStats[];
 }
 
-const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_LABELS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 export function computeWeekStats(weekState: WeekState): WeekStats {
   // Initialize counters for the week
@@ -47,12 +55,19 @@ export function computeWeekStats(weekState: WeekState): WeekStats {
       return;
     }
 
-    // 2. Exclude moved tasks (if movedTo is defined)
+    const type = task.type ?? "task";
+
+    // 2. Exclude informational types
+    if (type === "birthday" || type === "holiday") {
+      return;
+    }
+
+    // 3. Exclude moved tasks (if movedTo is defined)
     if (task.movedTo) {
       return;
     }
 
-    // 3. Ensure valid day index (0-6)
+    // 4. Ensure valid day index (0-6)
     if (task.dayIndex < 0 || task.dayIndex > 6) {
       return;
     }
@@ -113,5 +128,3 @@ export function formatWeekStatsAsMarkdown(stats: WeekStats): string {
 
   return lines.join("\n");
 }
-
-

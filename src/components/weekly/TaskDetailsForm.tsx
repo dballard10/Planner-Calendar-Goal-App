@@ -2,43 +2,96 @@ import { useState } from "react";
 import {
   IconClock,
   IconMapPin,
-  IconUsers,
-  IconTarget,
   IconRepeat,
   IconAlignLeft,
 } from "@tabler/icons-react";
-import type { TaskKind, AnySubtype } from "../../types/weekly";
-import {
-  eventSubtypes,
-  taskSubtypes,
-  subtypePickerStyles,
-} from "./subtypeStyles";
 
-interface TaskDetailsFormProps {
-  kind: TaskKind;
-  initialValues?: {
-    subtype?: AnySubtype;
-    startDate?: string;
-    endDate?: string;
-    startTime?: string;
-    endTime?: string;
-    description?: string;
-    location?: string;
-    people?: string;
-    goals?: string;
-  };
-  onChange?: (values: any) => void;
+interface TaskDetailsFormValues {
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  description?: string;
+  location?: string;
+  people?: string;
+  goals?: string;
+  linksMarkdown?: string;
 }
 
+interface TaskDetailsFormProps {
+  initialValues?: TaskDetailsFormValues;
+  onChange?: (values: TaskDetailsFormValues) => void;
+}
+
+const LINK_LINE_REGEX = /^\s*-\s*(?:\[(.*?)\]\((.*?)\)|(.*\S.*))$/;
+
+interface ParsedLink {
+  label?: string;
+  url: string;
+  raw: string;
+}
+
+interface LinkEntry extends ParsedLink {
+  index: number;
+}
+
+const parseLinkLine = (line: string): ParsedLink | null => {
+  const trimmed = line.trim();
+  const match = trimmed.match(LINK_LINE_REGEX);
+  if (!match) {
+    if (!trimmed) {
+      return null;
+    }
+    return {
+      label: trimmed,
+      url: trimmed,
+      raw: trimmed,
+    };
+  }
+
+  const label = match[1];
+  const url = match[2];
+  const fallback = match[3]?.trim();
+
+  if (label && url) {
+    return { label, url, raw: trimmed };
+  }
+
+  const finalUrl = fallback || "";
+  return { label: finalUrl, url: finalUrl, raw: trimmed };
+};
+
+const normalizeLinkUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const hasProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed);
+  const candidate = hasProtocol ? trimmed : `https://${trimmed}`;
+
+  try {
+    const url = new URL(candidate);
+    return url.href;
+  } catch {
+    return "";
+  }
+};
+
+const buildLinkLine = (url: string, label?: string) =>
+  label ? `- [${label}](${url})` : `- ${url}`;
+
+const cleanLinkLines = (markdown: string) =>
+  markdown
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+const joinLinkLines = (lines: string[]) => lines.join("\n");
+
 export default function TaskDetailsForm({
-  kind,
   initialValues,
   onChange,
 }: TaskDetailsFormProps) {
   // Local state for form fields
-  const [subtype, setSubtype] = useState<AnySubtype | undefined>(
-    initialValues?.subtype
-  );
   const [startDate, setStartDate] = useState(initialValues?.startDate || "");
   const [endDate, setEndDate] = useState(initialValues?.endDate || "");
   const [startTime, setStartTime] = useState(initialValues?.startTime || "");
@@ -49,20 +102,16 @@ export default function TaskDetailsForm({
   const [location, setLocation] = useState(initialValues?.location || "");
   const [people, setPeople] = useState(initialValues?.people || "");
   const [goals, setGoals] = useState(initialValues?.goals || "");
-
-  // Update subtype if kind changes and current subtype is invalid for new kind?
-  // Or just let the parent handle it.
-  // Ideally if kind switches from task to event, we might want to clear subtype or pick a default.
-  // For now, we'll just respect the passed initialValues or keep state.
-  // Actually, if 'kind' prop changes, we probably should reset the subtype options displayed.
+  const [linksMarkdown, setLinksMarkdown] = useState(
+    initialValues?.linksMarkdown || ""
+  );
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [newLinkLabel, setNewLinkLabel] = useState("");
 
   // Helper to handle changes and notify parent if needed
   const handleChange = (field: string, value: any) => {
     // Update local state based on field
     switch (field) {
-      case "subtype":
-        setSubtype(value);
-        break;
       case "startDate":
         setStartDate(value);
         break;
@@ -87,12 +136,14 @@ export default function TaskDetailsForm({
       case "goals":
         setGoals(value);
         break;
+      case "linksMarkdown":
+        setLinksMarkdown(value);
+        break;
     }
 
     // Notify parent
     if (onChange) {
       onChange({
-        subtype: field === "subtype" ? value : subtype,
         startDate: field === "startDate" ? value : startDate,
         endDate: field === "endDate" ? value : endDate,
         startTime: field === "startTime" ? value : startTime,
@@ -101,59 +152,39 @@ export default function TaskDetailsForm({
         location: field === "location" ? value : location,
         people: field === "people" ? value : people,
         goals: field === "goals" ? value : goals,
+        linksMarkdown: field === "linksMarkdown" ? value : linksMarkdown,
       });
     }
   };
 
-  const availableSubtypes = kind === "event" ? eventSubtypes : taskSubtypes;
+  const linkLines = cleanLinkLines(linksMarkdown);
+  const linkEntries = linkLines
+    .map((line, index) => {
+      const parsed = parseLinkLine(line);
+      return parsed ? { ...parsed, index } : null;
+    })
+    .filter((entry): entry is LinkEntry => Boolean(entry));
+
+  const normalizedNewLinkUrl = normalizeLinkUrl(newLinkUrl);
+  const canAddLink = Boolean(normalizedNewLinkUrl);
+
+  const handleAddLink = () => {
+    if (!normalizedNewLinkUrl) return;
+    const label = newLinkLabel.trim() || undefined;
+    const nextLine = buildLinkLine(normalizedNewLinkUrl, label);
+    const nextLines = [...linkLines, nextLine];
+    handleChange("linksMarkdown", joinLinkLines(nextLines));
+    setNewLinkUrl("");
+    setNewLinkLabel("");
+  };
+
+  const handleRemoveLink = (index: number) => {
+    const nextLines = linkLines.filter((_, idx) => idx !== index);
+    handleChange("linksMarkdown", joinLinkLines(nextLines));
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Subtype Selection */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase text-slate-500 tracking-wider">
-          Subtype
-        </label>
-        <div className="grid grid-cols-4 gap-2">
-          {availableSubtypes.map((st) => {
-            const style = subtypePickerStyles[st];
-            const isSelected = subtype === st;
-            return (
-              <button
-                key={st}
-                onClick={() => handleChange("subtype", st)}
-                className={`
-                  relative group flex flex-col items-center justify-center rounded-lg overflow-hidden transition-all duration-200
-                  ${
-                    isSelected
-                      ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900 opacity-100 scale-[1.02]"
-                      : "opacity-60 hover:opacity-100 hover:scale-[1.02]"
-                  }
-                `}
-                title={style.label}
-              >
-                <div
-                  className={`w-full aspect-[4/3] relative flex items-center justify-center ${style.background}`}
-                >
-                  <img
-                    src={`/subtask_images/${st}.png`}
-                    alt={style.label}
-                    className="w-8 h-8 object-contain drop-shadow-md mb-3 transition-transform group-hover:scale-110 duration-200"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-
-                  <span className="absolute bottom-1.5 left-0 right-0 text-center text-[10px] font-bold text-white/95 tracking-wide drop-shadow-md z-10 leading-none">
-                    {style.label}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Schedule Section */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 text-slate-100 font-medium">
@@ -249,45 +280,63 @@ export default function TaskDetailsForm({
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors"
           />
         </div>
-      </div>
-
-      <div className="h-px bg-slate-700/50" />
-
-      {/* People & Goals Section */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-slate-100 font-medium">
-          <IconUsers size={18} className="text-green-400" />
-          <h3>Context</h3>
-        </div>
-
-        {/* People */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-slate-400 flex items-center gap-1">
-            <IconUsers size={12} /> People
-          </label>
-          <input
-            type="text"
-            value={people}
-            onChange={(e) => handleChange("people", e.target.value)}
-            placeholder="Add people..."
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-colors"
-          />
-          <p className="text-[10px] text-slate-500">UI-only for now</p>
-        </div>
-
-        {/* Goals */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-slate-400 flex items-center gap-1">
-            <IconTarget size={12} /> Goals Attached
-          </label>
-          <input
-            type="text"
-            value={goals}
-            onChange={(e) => handleChange("goals", e.target.value)}
-            placeholder="Link goals..."
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-colors"
-          />
-          <p className="text-[10px] text-slate-500">UI-only for now</p>
+        {/* Links Section */}
+        <div className="flex flex-col gap-3">
+          <label className="text-xs text-slate-400">Links</label>
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              value={newLinkLabel}
+              onChange={(e) => setNewLinkLabel(e.target.value)}
+              placeholder="Label (optional)"
+              className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-colors"
+            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newLinkUrl}
+                onChange={(e) => setNewLinkUrl(e.target.value)}
+                placeholder="https://example.com"
+                className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={handleAddLink}
+                disabled={!canAddLink}
+                className="rounded px-3 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Add link
+              </button>
+            </div>
+          </div>
+          {linkEntries.length > 0 ? (
+            <div className="flex flex-col gap-2 pt-1">
+              {linkEntries.map((entry) => (
+                <div
+                  key={`${entry.index}-${entry.url}`}
+                  className="flex items-center justify-between gap-4 rounded border border-slate-700 bg-slate-800/40 px-3 py-2 text-sm text-slate-200"
+                >
+                  <a
+                    href={entry.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="truncate text-slate-100 underline-offset-4 hover:text-white hover:underline"
+                  >
+                    {entry.label || entry.url}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLink(entry.index)}
+                    className="text-xs text-rose-400 hover:text-rose-200 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 italic">No links added yet.</p>
+          )}
         </div>
       </div>
     </div>

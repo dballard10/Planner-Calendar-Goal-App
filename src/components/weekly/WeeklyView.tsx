@@ -1,10 +1,5 @@
-import { useState } from "react";
-import type {
-  WeekState,
-  TaskStatus,
-  TaskKind,
-  AnySubtype,
-} from "../../types/weekly";
+import { useState, useEffect } from "react";
+import type { WeekState, TaskStatus, WeeklyItemType } from "../../types/weekly";
 import WeekHeader from "./WeekHeader";
 import { RightSidePanel } from "../layout/RightSidePanel";
 import PageHeader from "../layout/PageHeader";
@@ -30,19 +25,29 @@ interface WeeklyViewProps {
     addGroup: (dayIndex: number) => void;
     updateTaskStatus: (id: string, status: TaskStatus) => void;
     updateTaskTitle: (id: string, title: string) => void;
-    updateTaskKind: (id: string, kind: TaskKind) => void;
-    updateTaskSubtype: (id: string, subtype: AnySubtype | undefined) => void;
+    updateTaskType: (id: string, type: WeeklyItemType) => void;
+    updateTaskLinks?: (id: string, linksMarkdown?: string) => void;
     deleteTask: (id: string) => void;
     updateGroupTitle: (id: string, title: string) => void;
     deleteGroup: (id: string) => void;
     // Linking Actions
-    setTaskGoal?: (taskId: string, goalId: string | null) => void;
+    setTaskGoals?: (taskId: string, goalIds: string[]) => void;
     setTaskCompanions?: (taskId: string, companionIds: string[]) => void;
   };
+  openTaskId?: string | null;
+  onOpenTaskHandled?: () => void;
 }
 
-export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
+export default function WeeklyView({
+  weekState,
+  actions,
+  openTaskId,
+  onOpenTaskHandled,
+}: WeeklyViewProps) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(
+    null
+  );
 
   // Details View State
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -89,7 +94,22 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
   const handleCloseDetails = () => {
     setDetailsMode(null);
     setSelectedTaskId(null);
+    setHighlightedTaskId(null);
   };
+
+  useEffect(() => {
+    if (!openTaskId) return;
+    setSelectedTaskId(openTaskId);
+    setDetailsMode("side-panel");
+    setIsPanelOpen(false);
+    setHighlightedTaskId(openTaskId);
+    const selector = `[data-task-id="${openTaskId}"]`;
+    const taskNode = document.querySelector<HTMLElement>(selector);
+    if (taskNode) {
+      taskNode.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    onOpenTaskHandled?.();
+  }, [openTaskId, onOpenTaskHandled]);
 
   // If in "page" mode, replace the entire view
   if (detailsMode === "page" && selectedTask) {
@@ -101,11 +121,15 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
         onBack={handleCloseDetails}
         onStatusChange={(s) => actions.updateTaskStatus(selectedTask.id, s)}
         onTitleChange={(t) => actions.updateTaskTitle(selectedTask.id, t)}
-        onKindChange={(k) => actions.updateTaskKind(selectedTask.id, k)}
-        onSubtypeChange={(st) => actions.updateTaskSubtype(selectedTask.id, st)}
-        onGoalChange={(gid) => actions.setTaskGoal?.(selectedTask.id, gid)}
+        onTypeChange={(type) => actions.updateTaskType(selectedTask.id, type)}
+        onGoalsChange={(goalIds) =>
+          actions.setTaskGoals?.(selectedTask.id, goalIds)
+        }
         onCompanionsChange={(cids) =>
           actions.setTaskCompanions?.(selectedTask.id, cids)
+        }
+        onLinksChange={(links) =>
+          actions.updateTaskLinks?.(selectedTask.id, links)
         }
       />
     );
@@ -120,6 +144,7 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
     <div className="relative min-h-screen flex flex-col">
       <PageHeader
         title="Weekly Planner"
+        subtitle={WeekHeader({ weekStart: weekStartDateObj })}
         rightContent={
           <PanelToggle
             isOpen={isPanelOpen}
@@ -136,9 +161,8 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
         }
       />
 
-      <div className="flex-1 mx-auto max-w-6xl w-full p-4 md:pr-12">
-        <WeekHeader weekStart={weekStartDateObj} />
-        <div className="flex flex-col gap-4 mt-4">
+      <div className="flex-1 mx-auto max-w-6xl w-full p-4 md:p-6">
+        <div className="flex flex-col gap-4 mt-2">
           {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
             const dayDate = getDateForDayIndex(weekStartDateObj, dayIndex);
 
@@ -160,6 +184,7 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
                 groups={dayGroups}
                 goals={weekState.goals}
                 companions={weekState.companions}
+                highlightTaskId={highlightedTaskId}
                 onAddTask={handleAddTask}
                 onAddGroup={actions.addGroup}
                 onAddTaskToGroup={handleAddTaskToGroup}
@@ -180,7 +205,7 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
 
       {/* Generic Panel (Tools & Notes) */}
       <RightSidePanel
-        title="Tools & Notes"
+        title="Overview"
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
       >
@@ -200,13 +225,17 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
             companions={weekState.companions}
             onStatusChange={(s) => actions.updateTaskStatus(selectedTask.id, s)}
             onTitleChange={(t) => actions.updateTaskTitle(selectedTask.id, t)}
-            onKindChange={(k) => actions.updateTaskKind(selectedTask.id, k)}
-            onSubtypeChange={(st) =>
-              actions.updateTaskSubtype(selectedTask.id, st)
+            onTypeChange={(type) =>
+              actions.updateTaskType(selectedTask.id, type)
             }
-            onGoalChange={(gid) => actions.setTaskGoal?.(selectedTask.id, gid)}
+            onGoalsChange={(goalIds) =>
+              actions.setTaskGoals?.(selectedTask.id, goalIds)
+            }
             onCompanionsChange={(cids) =>
               actions.setTaskCompanions?.(selectedTask.id, cids)
+            }
+            onLinksChange={(links) =>
+              actions.updateTaskLinks?.(selectedTask.id, links)
             }
           />
         )}
@@ -222,13 +251,15 @@ export default function WeeklyView({ weekState, actions }: WeeklyViewProps) {
           companions={weekState.companions}
           onStatusChange={(s) => actions.updateTaskStatus(selectedTask.id, s)}
           onTitleChange={(t) => actions.updateTaskTitle(selectedTask.id, t)}
-          onKindChange={(k) => actions.updateTaskKind(selectedTask.id, k)}
-          onSubtypeChange={(st) =>
-            actions.updateTaskSubtype(selectedTask.id, st)
+          onTypeChange={(type) => actions.updateTaskType(selectedTask.id, type)}
+          onGoalsChange={(goalIds) =>
+            actions.setTaskGoals?.(selectedTask.id, goalIds)
           }
-          onGoalChange={(gid) => actions.setTaskGoal?.(selectedTask.id, gid)}
           onCompanionsChange={(cids) =>
             actions.setTaskCompanions?.(selectedTask.id, cids)
+          }
+          onLinksChange={(links) =>
+            actions.updateTaskLinks?.(selectedTask.id, links)
           }
         />
       )}

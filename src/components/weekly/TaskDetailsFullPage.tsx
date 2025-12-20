@@ -2,12 +2,17 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import type {
   Task,
   TaskStatus,
-  TaskKind,
-  AnySubtype,
+  WeeklyItemType,
   Goal,
   Companion,
 } from "../../types/weekly";
 import TaskDetailsContent from "./TaskDetailsContent";
+import {
+  TASK_DETAILS_PAGE_CONTAINER,
+  TASK_DETAILS_PAGE_CONTENT_WRAPPER,
+  TASK_DETAILS_PAGE_HEADER,
+  TASK_DETAILS_PAGE_HEADER_BUTTON,
+} from "./taskStyles";
 
 interface TaskDetailsFullPageProps {
   task: Task;
@@ -16,10 +21,10 @@ interface TaskDetailsFullPageProps {
   onBack: () => void;
   onStatusChange?: (status: TaskStatus) => void;
   onTitleChange?: (title: string) => void;
-  onKindChange?: (kind: TaskKind) => void;
-  onSubtypeChange?: (subtype: AnySubtype | undefined) => void;
-  onGoalChange?: (goalId: string | null) => void;
+  onTypeChange?: (type: WeeklyItemType) => void;
+  onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
+  onLinksChange?: (linksMarkdown?: string) => void;
 }
 
 export default function TaskDetailsFullPage({
@@ -29,24 +34,21 @@ export default function TaskDetailsFullPage({
   onBack,
   onStatusChange,
   onTitleChange,
-  onKindChange,
-  onSubtypeChange,
-  onGoalChange,
+  onTypeChange,
+  onGoalsChange,
   onCompanionsChange,
+  onLinksChange,
 }: TaskDetailsFullPageProps) {
   return (
-    <div className="flex flex-col h-full bg-slate-950 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="sticky top-0 z-10 flex items-center gap-4 p-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 bg-slate-900 border border-slate-700 rounded hover:bg-slate-800 hover:text-slate-100 transition-colors"
-        >
+    <div className={TASK_DETAILS_PAGE_CONTAINER}>
+      <div className={TASK_DETAILS_PAGE_HEADER}>
+        <button onClick={onBack} className={TASK_DETAILS_PAGE_HEADER_BUTTON}>
           <IconArrowLeft className="w-4 h-4" />
           Back to Weekly View
         </button>
         <h1 className="text-lg font-semibold text-slate-100">Task Details</h1>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className={TASK_DETAILS_PAGE_CONTENT_WRAPPER}>
         <div className="max-w-4xl mx-auto p-6 min-h-full">
           <TaskDetailsContent
             task={task}
@@ -54,10 +56,10 @@ export default function TaskDetailsFullPage({
             companions={companions}
             onStatusChange={onStatusChange}
             onTitleChange={onTitleChange}
-            onKindChange={onKindChange}
-            onSubtypeChange={onSubtypeChange}
-            onGoalChange={onGoalChange}
+            onTypeChange={onTypeChange}
+            onGoalsChange={onGoalsChange}
             onCompanionsChange={onCompanionsChange}
+            onLinksChange={onLinksChange}
           />
         </div>
       </div>

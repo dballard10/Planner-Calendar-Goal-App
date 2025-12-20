@@ -1,19 +1,23 @@
 import React from "react";
-import { 
-  format, 
-  eachMonthOfInterval, 
-  startOfYear, 
-  endOfYear, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  isSameDay, 
-  isToday 
+import {
+  format,
+  eachMonthOfInterval,
+  startOfYear,
+  endOfYear,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  isToday,
 } from "date-fns";
 import type { CalendarEvent } from "../../types/calendar";
+import {
+  ITEM_TYPE_PRIORITIES,
+  ITEM_TYPE_STYLES,
+} from "../../lib/itemTypeConfig";
 
 interface YearCalendarGridProps {
   selectedDate: Date;
@@ -21,7 +25,11 @@ interface YearCalendarGridProps {
   events: CalendarEvent[];
 }
 
-export function YearCalendarGrid({ selectedDate, onDateSelect, events }: YearCalendarGridProps) {
+export function YearCalendarGrid({
+  selectedDate,
+  onDateSelect,
+  events,
+}: YearCalendarGridProps) {
   const yearStart = startOfYear(selectedDate);
   const yearEnd = endOfYear(selectedDate);
   const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
@@ -41,14 +49,14 @@ export function YearCalendarGrid({ selectedDate, onDateSelect, events }: YearCal
   );
 }
 
-function MiniMonth({ 
-  month, 
-  selectedDate, 
-  onDateSelect, 
-  events 
-}: { 
-  month: Date; 
-  selectedDate: Date; 
+function MiniMonth({
+  month,
+  selectedDate,
+  onDateSelect,
+  events,
+}: {
+  month: Date;
+  selectedDate: Date;
   onDateSelect: (date: Date) => void;
   events: CalendarEvent[];
 }) {
@@ -65,11 +73,14 @@ function MiniMonth({
       <h3 className="font-semibold text-slate-200 mb-3 ml-1">
         {format(month, "MMMM")}
       </h3>
-      
+
       {/* Weekday headers */}
       <div className="grid grid-cols-7 mb-2">
         {weekDays.map((d, i) => (
-          <div key={i} className="text-center text-xs text-slate-500 font-medium">
+          <div
+            key={i}
+            className="text-center text-xs text-slate-500 font-medium"
+          >
             {d}
           </div>
         ))}
@@ -81,10 +92,18 @@ function MiniMonth({
           const isCurrentMonth = isSameMonth(day, month);
           const isSelected = isSameDay(day, selectedDate);
           const isTodayDate = isToday(day);
-          
+
           // Simple event check
-          const dayEvents = events.filter(e => e.start === format(day, "yyyy-MM-dd"));
+          const dayEvents = events.filter(
+            (e) => e.start === format(day, "yyyy-MM-dd")
+          );
           const hasEvents = dayEvents.length > 0;
+          const primaryType = ITEM_TYPE_PRIORITIES.find((type) =>
+            dayEvents.some((event) => event.type === type)
+          );
+          const dotColor = primaryType
+            ? ITEM_TYPE_STYLES[primaryType].colorHex
+            : ITEM_TYPE_STYLES.task.colorHex;
 
           return (
             <button
@@ -93,13 +112,24 @@ function MiniMonth({
               className={`
                 relative h-8 w-8 mx-auto flex items-center justify-center text-sm rounded-full transition-colors
                 ${!isCurrentMonth ? "text-slate-700" : "text-slate-300"}
-                ${isSelected ? "bg-indigo-600 text-white font-semibold" : "hover:bg-slate-800"}
-                ${isTodayDate && !isSelected ? "ring-1 ring-indigo-500 text-indigo-400" : ""}
+                ${
+                  isSelected
+                    ? "bg-indigo-600 text-white font-semibold"
+                    : "hover:bg-slate-800"
+                }
+                ${
+                  isTodayDate && !isSelected
+                    ? "ring-1 ring-indigo-500 text-indigo-400"
+                    : ""
+                }
               `}
             >
               {format(day, "d")}
               {hasEvents && !isSelected && (
-                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-emerald-500 rounded-full" />
+                <span
+                  className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                  style={{ backgroundColor: dotColor }}
+                />
               )}
             </button>
           );

@@ -31,6 +31,7 @@ interface DayCardProps {
   onOpenDetailsSidePanel?: (taskId: string) => void;
   onOpenDetailsModal?: (taskId: string) => void;
   onOpenDetailsPage?: (taskId: string) => void;
+  highlightTaskId?: string | null;
 }
 
 export default function DayCard({
@@ -51,6 +52,7 @@ export default function DayCard({
   onOpenDetailsSidePanel,
   onOpenDetailsModal,
   onOpenDetailsPage,
+  highlightTaskId,
 }: DayCardProps) {
   // Collapse if no root tasks AND no groups
   const isEmpty = tasks.length === 0 && groups.length === 0;
@@ -123,6 +125,7 @@ export default function DayCard({
                   tasks={groupTasks}
                   goals={goals}
                   companions={companions}
+                  highlightTaskId={highlightTaskId}
                   onAddTask={(gid, title) =>
                     onAddTaskToGroup(dayIndex, gid, title)
                   }
@@ -153,6 +156,7 @@ export default function DayCard({
                 task={task}
                 goals={goals}
                 companions={companions}
+                isHighlighted={task.id === highlightTaskId}
                 onStatusChange={onUpdateTaskStatus}
                 onTitleChange={onUpdateTaskTitle}
                 onDelete={onDeleteTask}

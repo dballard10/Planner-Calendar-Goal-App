@@ -4,7 +4,23 @@ import { IconTrash } from "@tabler/icons-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import StatusSelector from "./StatusSelector";
-import { getSubtypeStyle } from "./subtypeStyles";
+import {
+  ITEM_TYPE_STYLES,
+  INFORMATIONAL_TYPES,
+} from "../../lib/itemTypeConfig";
+import EmojiCircleStack from "../ui/EmojiCircleStack";
+import {
+  TASK_CARD_BODY,
+  TASK_CARD_CONTAINER,
+  TASK_CARD_INDICATORS_ROW,
+  TASK_CARD_TITLE_DISPLAY,
+  TASK_CARD_TITLE_INPUT,
+  TASK_CARD_TITLE_WRAPPER,
+  TASK_DELETE_BUTTON,
+  TASK_INDICATOR_GROUP,
+  TASK_KIND_BADGE,
+  getTaskCardStyleClass,
+} from "./taskStyles";
 
 interface TaskCardProps {
   task: Task;
@@ -16,6 +32,7 @@ interface TaskCardProps {
   onOpenDetailsSidePanel?: (taskId: string) => void;
   onOpenDetailsModal?: (taskId: string) => void;
   onOpenDetailsPage?: (taskId: string) => void;
+  isHighlighted?: boolean;
 }
 
 const PLACEHOLDER_TEXT = "New task...";
@@ -38,6 +55,9 @@ export default function TaskCard({
   onTitleChange,
   onDelete,
   onOpenDetailsSidePanel,
+  onOpenDetailsModal,
+  onOpenDetailsPage,
+  isHighlighted = false,
 }: TaskCardProps) {
   const isNewTask = task.title === PLACEHOLDER_TEXT;
   const [isEditing, setIsEditing] = useState(isNewTask);
@@ -128,33 +148,25 @@ export default function TaskCard({
     ),
   };
 
-  const kind = task.kind ?? "task";
-  const subtypeStyle = getSubtypeStyle(task.subtype);
+  const type = task.type ?? "task";
+  const typeStyle = ITEM_TYPE_STYLES[type] ?? ITEM_TYPE_STYLES.task;
+  const showStatusSelector = !INFORMATIONAL_TYPES.includes(type);
 
-  // Determine base classes (background & text) based on kind
-  const baseClasses =
-    kind === "event"
-      ? "bg-sky-900/30 text-slate-200"
-      : "bg-slate-900 text-slate-200";
+  // Determine text color based on type
+  const baseTextClass = typeStyle.textColor || "text-slate-200";
+  const highlightClass = isHighlighted
+    ? "ring-2 ring-white/80 shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+    : "";
 
-  // Determine border classes
-  // Default borders based on kind
-  let borderClass =
-    kind === "event"
-      ? "border-sky-700/50 hover:border-sky-500"
-      : "border-slate-700 hover:border-slate-600";
+  const cardStyleClass = getTaskCardStyleClass({
+    itemType: type,
+    textClass: baseTextClass,
+    isClickable: true,
+  });
 
-  // If subtype exists and has a border defined, override it.
-  if (subtypeStyle?.border) {
-    borderClass = subtypeStyle.border;
-  }
-
-  const cardStyleClass = `${baseClasses} ${borderClass} shadow-sm`;
-
-  // Resolve Linked Goal
-  const linkedGoal = task.goalId
-    ? goals.find((g) => g.id === task.goalId)
-    : null;
+  const taskGoals = (task.goalIds ?? [])
+    .map((goalId) => goals.find((g) => g.id === goalId))
+    .filter((g): g is Goal => !!g);
   // Resolve Companions
   const taskCompanions = task.companionIds
     ? (task.companionIds
@@ -166,17 +178,20 @@ export default function TaskCard({
     <div
       role="button"
       tabIndex={0}
+      data-task-id={task.id}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
-      className={`group relative w-full max-w-[1100px] mx-auto rounded border cursor-pointer overflow-hidden transition-all ${cardStyleClass}`}
+      className={`${TASK_CARD_CONTAINER} ${cardStyleClass} ${highlightClass}`}
     >
-      <div className="flex items-center gap-2 w-full p-2 pr-8">
-        <div onClick={(e) => e.stopPropagation()}>
-          <StatusSelector
-            status={task.status}
-            onChange={(nextStatus) => onStatusChange(task.id, nextStatus)}
-          />
-        </div>
+      <div className={TASK_CARD_BODY}>
+        {showStatusSelector && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <StatusSelector
+              status={task.status}
+              onChange={(nextStatus) => onStatusChange(task.id, nextStatus)}
+            />
+          </div>
+        )}
 
         <div className="flex-1 min-w-0 flex items-center gap-2">
           {isEditing ? (
@@ -190,16 +205,16 @@ export default function TaskCard({
               onKeyDown={handleTitleKeyDown}
               onClick={(e) => e.stopPropagation()}
               placeholder={PLACEHOLDER_TEXT}
-              className="flex-1 w-full px-2 py-1 bg-transparent rounded text-inherit focus:outline-none"
+              className={TASK_CARD_TITLE_INPUT}
             />
           ) : (
-            <div className="flex-1 px-2 py-1 select-none truncate">
+            <div className={TASK_CARD_TITLE_WRAPPER}>
               <div
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsEditing(true);
                 }}
-                className="inline-block text-inherit cursor-text transition-transform origin-left hover:scale-105"
+                className={TASK_CARD_TITLE_DISPLAY}
               >
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -214,61 +229,65 @@ export default function TaskCard({
           )}
         </div>
 
-        <div className="flex items-center gap-2 transition-transform duration-200 ease-out group-hover:-translate-x-3 group-focus-within:-translate-x-3">
+        <div className={TASK_CARD_INDICATORS_ROW}>
           {/* Indicators Row */}
-          {!isEditing && (linkedGoal || taskCompanions.length > 0) && (
-            <div className="flex items-center gap-2 px-2 opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              {linkedGoal && (
-                <div className="flex items-center gap-1 text-[10px] bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700/50 text-slate-300">
-                  <span>{linkedGoal.emoji}</span>
-                  <span className="truncate max-w-[80px]">
-                    {linkedGoal.name}
-                  </span>
-                </div>
-              )}
-              {taskCompanions.length > 0 && (
-                <div className="flex items-center -space-x-1.5">
-                  {taskCompanions.slice(0, 3).map((c) => (
-                    <div
-                      key={c.id}
-                      className="w-5 h-5 rounded-full border border-slate-800 flex items-center justify-center text-[9px] font-medium text-white shadow-sm"
-                      style={{ backgroundColor: c.color || "#64748b" }}
-                      title={c.name}
-                    >
-                      {getInitials(c.name)}
-                    </div>
-                  ))}
-                  {taskCompanions.length > 3 && (
-                    <div className="w-5 h-5 rounded-full bg-slate-700 border border-slate-800 flex items-center justify-center text-[8px] text-slate-400 font-medium">
-                      +{taskCompanions.length - 3}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          {!isEditing &&
+            (taskGoals.length > 0 || taskCompanions.length > 0) && (
+              <div className={TASK_INDICATOR_GROUP}>
+                {taskGoals.length > 0 && (
+                  <EmojiCircleStack
+                    items={taskGoals.map((goal) => ({
+                      id: goal.id,
+                      emoji: goal.emoji,
+                      label: goal.name,
+                      style: {
+                        backgroundColor: goal.color ?? "#475569",
+                      },
+                    }))}
+                    maxVisible={3}
+                    size={20}
+                    circleClassName="border border-slate-800 text-[11px] text-white shadow-sm"
+                    overflowClassName="border border-slate-800 bg-slate-900/80 text-[10px] text-slate-300"
+                  />
+                )}
+                {taskCompanions.length > 0 && (
+                  <div className="flex items-center -space-x-1.5">
+                    {taskCompanions.slice(0, 3).map((c) => (
+                      <div
+                        key={c.id}
+                        className="w-5 h-5 rounded-full border border-slate-800 flex items-center justify-center text-[9px] font-medium text-white shadow-sm"
+                        style={{ backgroundColor: c.color || "#64748b" }}
+                        title={c.name}
+                      >
+                        {getInitials(c.name)}
+                      </div>
+                    ))}
+                    {taskCompanions.length > 3 && (
+                      <div className="w-5 h-5 rounded-full bg-slate-700 border border-slate-800 flex items-center justify-center text-[8px] text-slate-400 font-medium">
+                        +{taskCompanions.length - 3}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-          {subtypeStyle?.label && (
-            <div className="flex-shrink-0 h-6 flex items-center justify-end min-w-[40px]">
-              <span
-                className={`text-xs font-semibold select-none ${
-                  subtypeStyle.text || "text-slate-400"
-                }`}
-              >
-                {subtypeStyle.label}
-              </span>
-            </div>
-          )}
+          <div className={TASK_KIND_BADGE}>
+            <span
+              className={`text-xs font-semibold select-none ${
+                typeStyle.badgeText || "text-slate-400"
+              }`}
+            >
+              {typeStyle.label}
+            </span>
+          </div>
         </div>
       </div>
 
       {onDelete && (
         <button
           onClick={handleDelete}
-          className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded transition-all duration-200 ease-out
-            text-slate-400 hover:text-red-400 hover:bg-slate-800
-            opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
-            pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto`}
+          className={TASK_DELETE_BUTTON}
           aria-label="Delete task"
         >
           <IconTrash className="w-4 h-4" />

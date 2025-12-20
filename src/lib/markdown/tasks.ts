@@ -131,7 +131,7 @@ export const weekStateToMarkdown = (week: WeekState): string => {
     // We need to interleave them based on position if we want precise reconstruction,
     // but for now let's just dump root tasks then groups.
     // TODO: A more robust approach would be to unify them into a single list of "items" and sort.
-    
+
     // Render root tasks first (or we could mix them)
     if (rootTasks.length > 0) {
       for (const task of rootTasks) {
@@ -143,11 +143,11 @@ export const weekStateToMarkdown = (week: WeekState): string => {
     for (const group of dayGroups) {
       lines.push("");
       lines.push(`#### Group: ${group.title}`);
-      
+
       const groupTasks = week.tasks
         .filter((task) => task.groupId === group.id)
         .sort((a, b) => a.position - b.position);
-        
+
       for (const task of groupTasks) {
         // Indent tasks under group
         lines.push(`  ${taskToMarkdownLine(task)}`);
@@ -171,7 +171,7 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
   let weekStart = "";
   let currentDayIndex: number | null = null;
   let currentGroupId: string | null = null;
-  
+
   const tasks: Task[] = [];
   const groups: Group[] = [];
 
@@ -209,13 +209,16 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
     // Simple heuristic: "#### Group: My Title"
     if (trimmed.startsWith("#### Group:")) {
       if (currentDayIndex == null) continue;
-      
+
       const groupTitle = trimmed.replace("#### Group:", "").trim();
       const newGroup: Group = {
         id: getOrCreateId(),
         title: groupTitle,
         dayIndex: currentDayIndex,
-        position: groups.filter(g => g.dayIndex === currentDayIndex).length + tasks.filter(t => t.dayIndex === currentDayIndex && !t.groupId).length,
+        position:
+          groups.filter((g) => g.dayIndex === currentDayIndex).length +
+          tasks.filter((t) => t.dayIndex === currentDayIndex && !t.groupId)
+            .length,
         createdAt: new Date().toISOString(),
       };
       groups.push(newGroup);
@@ -234,11 +237,11 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
       // until we hit a new day or new group.
       // Ideally we check indentation levels, but let's keep it simple as requested.
       // If line starts with spaces and we have a group, put it in the group.
-      
+
       // Check indentation from regex match
       const match = line.match(TASK_LINE_REGEX);
       const indentation = match ? match[1] : "";
-      
+
       // If no indentation, it might mean we stepped out of the group
       // But let's be loose: if there is an active group, assign to it.
       // If user wants to "exit" group in markdown, they usually start a new header or unindented list.
@@ -246,18 +249,18 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
       // Let's say 2+ spaces = group task if group active.
       let targetGroupId = currentGroupId;
       if (currentGroupId && indentation.length < 2) {
-         // Indentation broken -> likely exited group
-         targetGroupId = null;
-         currentGroupId = null; 
+        // Indentation broken -> likely exited group
+        targetGroupId = null;
+        currentGroupId = null;
       }
 
-      const existingInContext = targetGroupId 
-        ? tasks.filter(t => t.groupId === targetGroupId)
-        : tasks.filter(t => t.dayIndex === currentDayIndex && !t.groupId);
+      const existingInContext = targetGroupId
+        ? tasks.filter((t) => t.groupId === targetGroupId)
+        : tasks.filter((t) => t.dayIndex === currentDayIndex && !t.groupId);
 
       tasks.push({
         id: getOrCreateId(),
-        kind: "task",
+        type: "task",
         title: parsed.title,
         status: parsed.status,
         dayIndex: currentDayIndex,

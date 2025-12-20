@@ -1,4 +1,3 @@
-import React from "react";
 import type { WeekStats } from "../../lib/weekly/stats";
 
 interface WeeklyStatsPanelProps {
@@ -43,7 +42,9 @@ export function WeeklyStatsPanel({ stats }: WeeklyStatsPanelProps) {
 
       {/* Per-Day Breakdown */}
       <div>
-        <h4 className="text-slate-100 font-medium mb-3 px-1">Daily Breakdown</h4>
+        <h4 className="text-slate-100 font-medium mb-3 px-1">
+          Daily Breakdown
+        </h4>
         <div className="space-y-3">
           {byDay.map((day) => (
             <div
@@ -67,7 +68,9 @@ export function WeeklyStatsPanel({ stats }: WeeklyStatsPanelProps) {
                     <span className="text-slate-400">Completed</span>
                     <span
                       className={
-                        day.completed > 0 ? "text-emerald-400" : "text-slate-600"
+                        day.completed > 0
+                          ? "text-emerald-400"
+                          : "text-slate-600"
                       }
                     >
                       {day.completed} / {day.total}
@@ -102,5 +105,3 @@ export function WeeklyStatsPanel({ stats }: WeeklyStatsPanelProps) {
     </div>
   );
 }
-
-

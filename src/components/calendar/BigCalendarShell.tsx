@@ -8,6 +8,7 @@ import getDay from "date-fns/getDay";
 import enUS from "date-fns/locale/en-US";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import type { CalendarEvent, CalendarViewMode } from "../../types/calendar";
+import { ITEM_TYPE_STYLES } from "../../lib/itemTypeConfig";
 
 const locales = {
   "en-US": enUS,
@@ -22,7 +23,7 @@ const localizer = dateFnsLocalizer({
 });
 
 // Custom styles override
-import "./BigCalendarOverrides.css"; 
+import "./BigCalendarOverrides.css";
 
 interface BigCalendarShellProps {
   events: CalendarEvent[];
@@ -39,27 +40,37 @@ export default function BigCalendarShell({
   onNavigate,
   onViewChange,
 }: BigCalendarShellProps) {
-  
   // Map our ViewMode to RBC View
   // RBC views: 'month', 'week', 'work_week', 'day', 'agenda'
-  const rbcView = viewMode === 'year' ? 'month' : viewMode; // Fallback, though year shouldn't be here
+  const rbcView = viewMode === "year" ? "month" : viewMode; // Fallback, though year shouldn't be here
 
   // Map our events to RBC events
-  const rbcEvents = events.map(evt => ({
+  const rbcEvents = events.map((evt) => ({
     id: evt.id,
     title: evt.title,
     start: new Date(evt.start),
     end: evt.end ? new Date(evt.end) : new Date(evt.start), // Default to start if no end
-    allDay: !evt.end || evt.type === 'task', // Tasks are all day usually
-    resource: evt
+    allDay: !evt.end || evt.type === "task", // Tasks are all day usually
+    resource: evt,
   }));
 
+  const eventPropGetter = ({ resource }: { resource: CalendarEvent }) => {
+    const style = ITEM_TYPE_STYLES[resource.type] ?? ITEM_TYPE_STYLES.task;
+    return {
+      style: {
+        backgroundColor: style.colorHex,
+        borderColor: style.colorHex,
+        color: "#fff",
+      },
+    };
+  };
+
   const handleOnView = (view: View) => {
-      // RBC types 'View' might not match exactly our 'CalendarViewMode'
-      // We only support month, week, day
-      if (view === 'month' || view === 'week' || view === 'day') {
-          onViewChange(view);
-      }
+    // RBC types 'View' might not match exactly our 'CalendarViewMode'
+    // We only support month, week, day
+    if (view === "month" || view === "week" || view === "day") {
+      onViewChange(view);
+    }
   };
 
   return (
@@ -75,15 +86,15 @@ export default function BigCalendarShell({
         onNavigate={onNavigate}
         onView={handleOnView}
         toolbar={false} // We use our own toolbar in CalendarView
+        eventPropGetter={eventPropGetter}
         components={{
           event: ({ event }) => (
-            <div className={`text-xs ${event.resource.type === 'task' ? 'opacity-90' : 'font-bold'}`}>
-               {event.title}
+            <div className="text-xs font-semibold leading-tight truncate">
+              {event.title}
             </div>
-          )
+          ),
         }}
       />
     </div>
   );
 }
-

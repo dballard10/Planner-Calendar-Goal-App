@@ -39,12 +39,6 @@ const STATUS_OPTIONS: Array<{
     iconClass: "text-emerald-400",
   },
   {
-    value: "moved",
-    label: "Moved",
-    icon: <IconCircleArrowRight className="w-6 h-6" />,
-    iconClass: "text-slate-300",
-  },
-  {
     value: "cancelled",
     label: "Cancelled",
     icon: <IconCircleMinus className="w-6 h-6" />,

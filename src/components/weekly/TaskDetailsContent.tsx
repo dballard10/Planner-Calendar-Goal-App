@@ -2,8 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import type {
   Task,
   TaskStatus,
-  TaskKind,
-  AnySubtype,
+  WeeklyItemType,
   Goal,
   Companion,
 } from "../../types/weekly";
@@ -17,6 +16,49 @@ import {
   IconChevronDown,
   IconCheck,
 } from "@tabler/icons-react";
+import {
+  ITEM_TYPE_STYLES,
+  INFORMATIONAL_TYPES,
+} from "../../lib/itemTypeConfig";
+import type { ItemTypeStyle } from "../../lib/itemTypeConfig";
+import {
+  TASK_COMPANION_AVATAR,
+  TASK_COMPANION_INPUT,
+  TASK_COMPANION_INPUT_WRAPPER,
+  TASK_COMPANION_LABEL,
+  TASK_COMPANION_PILL,
+  TASK_COMPANION_PILL_AVATAR,
+  TASK_COMPANION_PILL_ICON,
+  TASK_COMPANION_SELECTED_LIST,
+  TASK_COMPANION_SELECTOR,
+  TASK_COMPANION_SHOW_MORE_BUTTON,
+  TASK_COMPANION_SUGGESTION,
+  TASK_COMPANION_DROPDOWN,
+  TASK_DETAILS_HEADER,
+  TASK_DETAILS_HEADER_ROW,
+  TASK_DETAILS_ROOT,
+  TASK_DETAILS_TITLE_DISPLAY,
+  TASK_DETAILS_TITLE_INPUT,
+  TASK_FORM_WRAPPER,
+  TASK_GOAL_BUTTON,
+  TASK_GOAL_BUTTON_SELECTED,
+  TASK_GOAL_BUTTON_UNSELECTED,
+  TASK_GOAL_DROPDOWN,
+  TASK_GOAL_PILL,
+  TASK_GOAL_PILL_AVATAR_BORDER,
+  TASK_GOAL_PILL_REMOVE_ICON,
+  TASK_GOAL_PILLS_WRAP,
+  TASK_GOAL_SELECTOR,
+  TASK_GOAL_SELECTOR_LABEL,
+  TASK_GOAL_TRIGGER,
+  TASK_LINKS_GRID,
+  TASK_TYPE_BUTTON_BASE,
+  TASK_TYPE_BUTTON_SELECTED,
+  TASK_TYPE_BUTTON_UNSELECTED,
+  TASK_TYPE_SELECTOR_BUTTONS,
+  TASK_TYPE_SELECTOR_LABEL,
+  TASK_TYPE_SELECTOR_WRAPPER,
+} from "./taskStyles";
 
 interface TaskDetailsContentProps {
   task: Task;
@@ -24,10 +66,10 @@ interface TaskDetailsContentProps {
   companions: Companion[];
   onStatusChange?: (status: TaskStatus) => void;
   onTitleChange?: (title: string) => void;
-  onKindChange?: (kind: TaskKind) => void;
-  onSubtypeChange?: (subtype: AnySubtype | undefined) => void;
-  onGoalChange?: (goalId: string | null) => void;
+  onTypeChange?: (type: WeeklyItemType) => void;
+  onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
+  onLinksChange?: (linksMarkdown?: string) => void;
 }
 
 // Helper to get initials
@@ -46,15 +88,20 @@ export default function TaskDetailsContent({
   companions,
   onStatusChange,
   onTitleChange,
-  onKindChange,
-  onSubtypeChange,
-  onGoalChange,
+  onTypeChange,
+  onGoalsChange,
   onCompanionsChange,
+  onLinksChange,
 }: TaskDetailsContentProps) {
   // We can initialize the form with data from the task later.
   // For now, we just pass the task title if we want, or rely on internal form state.
 
-  const kind = task.kind ?? "task";
+  const type = task.type;
+  const showStatusSelector = !INFORMATIONAL_TYPES.includes(type);
+  const typeOptions = Object.entries(ITEM_TYPE_STYLES) as [
+    WeeklyItemType,
+    ItemTypeStyle
+  ][];
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -75,13 +122,7 @@ export default function TaskDetailsContent({
   useEffect(() => {
     setEditTitle(task.title);
     setIsEditingTitle(false);
-
-    // Reset goals for new task
-    if (task.goalId) {
-      setSelectedGoalIds([task.goalId]);
-    } else {
-      setSelectedGoalIds([]);
-    }
+    setSelectedGoalIds(task.goalIds ?? []);
 
     // Reset search/dropdowns when switching tasks
     setSearchQuery("");
@@ -126,10 +167,7 @@ export default function TaskDetailsContent({
     }
 
     setSelectedGoalIds(newSelection);
-
-    // Bridge to single-goal data model: pick first or null
-    const primaryGoalId = newSelection.length > 0 ? newSelection[0] : null;
-    onGoalChange?.(primaryGoalId);
+    onGoalsChange?.(newSelection);
   };
 
   // Derived Companion Lists
@@ -202,19 +240,19 @@ export default function TaskDetailsContent({
     : availableCompanions.slice(0, 5);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header Section - stays fixed while the rest scrolls */}
-      <div className="sticky top-0 z-10 flex flex-col gap-4 border-b border-slate-700 bg-slate-900/95 backdrop-blur-sm px-4 pt-4 pb-4">
-        <div className="flex items-start gap-3">
-          {/* Status Selector reused here */}
-          <div className="mt-1">
-            <StatusSelector
-              status={task.status}
-              onChange={(newStatus) => onStatusChange?.(newStatus)}
-            />
-          </div>
+    <div className={TASK_DETAILS_ROOT}>
+      {/* Header Section */}
+      <div className={TASK_DETAILS_HEADER}>
+        <div className={TASK_DETAILS_HEADER_ROW}>
+          {showStatusSelector && (
+            <div className="mt-1">
+              <StatusSelector
+                status={task.status}
+                onChange={(newStatus) => onStatusChange?.(newStatus)}
+              />
+            </div>
+          )}
 
-          {/* Title - Editable */}
           <div className="flex-1 min-w-0">
             {isEditingTitle ? (
               <input
@@ -223,13 +261,13 @@ export default function TaskDetailsContent({
                 onChange={(e) => setEditTitle(e.target.value)}
                 onBlur={saveTitle}
                 onKeyDown={handleTitleKeyDown}
-                className="text-xl font-bold text-slate-100 leading-tight bg-transparent border-none outline-none p-0 mt-1.5 focus:ring-0 w-full placeholder-slate-500"
+                className={TASK_DETAILS_TITLE_INPUT}
                 placeholder="Task title"
               />
             ) : (
               <h2
                 onClick={() => setIsEditingTitle(true)}
-                className="text-xl font-bold text-slate-100 leading-tight break-words cursor-text hover:text-white mt-1.5 transition-colors"
+                className={TASK_DETAILS_TITLE_DISPLAY}
               >
                 {task.title}
               </h2>
@@ -237,33 +275,34 @@ export default function TaskDetailsContent({
           </div>
         </div>
 
-        {/* Metadata & Kind Selector */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+        {/* Type Selector */}
+        <div className={TASK_TYPE_SELECTOR_WRAPPER}>
+          <div className={TASK_TYPE_SELECTOR_LABEL}>
             <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">
               Type
             </span>
-            <div className="flex bg-slate-800 rounded p-0.5 border border-slate-700">
-              <button
-                onClick={() => onKindChange?.("task")}
-                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                  kind === "task"
-                    ? "bg-slate-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Task
-              </button>
-              <button
-                onClick={() => onKindChange?.("event")}
-                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                  kind === "event"
-                    ? "bg-sky-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Event
-              </button>
+            <div className={TASK_TYPE_SELECTOR_BUTTONS}>
+              {typeOptions.map(([optionType, style]) => {
+                const isSelected = type === optionType;
+                return (
+                  <button
+                    key={optionType}
+                    onClick={() => {
+                      if (optionType !== type) {
+                        onTypeChange?.(optionType);
+                      }
+                    }}
+                    className={`${TASK_TYPE_BUTTON_BASE} ${
+                      isSelected
+                        ? `${style.pillBackground} ${style.badgeText} ${TASK_TYPE_BUTTON_SELECTED}`
+                        : TASK_TYPE_BUTTON_UNSELECTED
+                    }`}
+                    title={style.label}
+                  >
+                    {style.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -276,12 +315,12 @@ export default function TaskDetailsContent({
       </div>
 
       {/* Content below the header - scrolls with the sidebar/modal */}
-      <div className="flex-1 px-4 pb-4 pt-6 space-y-6">
+      <div className={TASK_FORM_WRAPPER}>
         {/* Linking Section (Goals & Companions) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-slate-700 pb-6">
+        <div className={TASK_LINKS_GRID}>
           {/* Goals Selector */}
-          <div className="space-y-2 relative" ref={goalDropdownRef}>
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
+          <div className={TASK_GOAL_SELECTOR} ref={goalDropdownRef}>
+            <div className={TASK_GOAL_SELECTOR_LABEL}>
               <IconTarget className="w-4 h-4" />
               Linked Goal
             </div>
@@ -289,7 +328,7 @@ export default function TaskDetailsContent({
             {/* Custom Multi-Select Trigger */}
             <div
               onClick={() => setIsGoalDropdownOpen(!isGoalDropdownOpen)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 outline-none hover:border-slate-600 cursor-pointer flex items-center justify-between transition-colors min-h-[38px]"
+              className={TASK_GOAL_TRIGGER}
             >
               <span className="text-slate-400 select-none">
                 {selectedGoals.length > 0
@@ -307,7 +346,7 @@ export default function TaskDetailsContent({
 
             {/* Dropdown Menu */}
             {isGoalDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto z-30 ring-1 ring-slate-800 animate-in fade-in zoom-in-95 duration-100">
+              <div className={TASK_GOAL_DROPDOWN}>
                 <div className="p-1 space-y-0.5">
                   {goals.length > 0 ? (
                     goals.map((g) => {
@@ -316,10 +355,10 @@ export default function TaskDetailsContent({
                         <button
                           key={g.id}
                           onClick={() => handleToggleGoal(g.id)}
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors text-left group ${
+                          className={`${TASK_GOAL_BUTTON} ${
                             isSelected
-                              ? "bg-indigo-600/10 text-indigo-200"
-                              : "hover:bg-slate-800 text-slate-300 hover:text-slate-100"
+                              ? TASK_GOAL_BUTTON_SELECTED
+                              : TASK_GOAL_BUTTON_UNSELECTED
                           }`}
                         >
                           <span className="flex-shrink-0 w-5 text-center">
@@ -342,18 +381,29 @@ export default function TaskDetailsContent({
             )}
 
             {/* Selected Goals Pills */}
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className={TASK_GOAL_PILLS_WRAP}>
               {selectedGoals.length > 0 ? (
                 selectedGoals.map((g) => (
                   <button
                     key={g.id}
                     onClick={() => handleToggleGoal(g.id)}
-                    className="group flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border bg-indigo-600/20 border-indigo-500/50 text-indigo-200 hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-200 transition-all"
+                    className={TASK_GOAL_PILL}
                     title={`Unlink ${g.name}`}
                   >
-                    <span>{g.emoji}</span>
+                    <div className="relative w-5 h-5">
+                      <div
+                        className={TASK_GOAL_PILL_AVATAR_BORDER}
+                        style={{ backgroundColor: g.color ?? "#475569" }}
+                      >
+                        <span className="text-[11px] leading-none">
+                          {g.emoji}
+                        </span>
+                      </div>
+                      <div className={TASK_GOAL_PILL_REMOVE_ICON}>
+                        <IconX className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </div>
                     <span>{g.name}</span>
-                    <IconX className="w-3 h-3 opacity-60 group-hover:opacity-100" />
                   </button>
                 ))
               ) : (
@@ -365,14 +415,17 @@ export default function TaskDetailsContent({
           </div>
 
           {/* Companions Selector */}
-          <div className="space-y-3 relative">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
+          <div className={TASK_COMPANION_SELECTOR}>
+            <div className={TASK_COMPANION_LABEL}>
               <IconUsers className="w-4 h-4" />
               Companions
             </div>
 
             {/* Search Input with Autocomplete Dropdown */}
-            <div className="relative z-20" ref={companionDropdownRef}>
+            <div
+              className={TASK_COMPANION_INPUT_WRAPPER}
+              ref={companionDropdownRef}
+            >
               <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
                 type="text"
@@ -380,12 +433,12 @@ export default function TaskDetailsContent({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsCompanionDropdownOpen(true)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-sm text-slate-200 outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600"
+                className={TASK_COMPANION_INPUT}
               />
 
               {/* Dropdown Results */}
               {isCompanionDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto z-30 ring-1 ring-slate-800">
+                <div className={TASK_COMPANION_DROPDOWN}>
                   {companionSuggestions.length > 0 ? (
                     <div className="p-1 space-y-0.5">
                       {companionSuggestions.map((c) => (
@@ -396,10 +449,10 @@ export default function TaskDetailsContent({
                             setSearchQuery(""); // Clear search after adding
                             // Keep dropdown open so user can quickly add more
                           }}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-slate-800 rounded transition-colors text-left group"
+                          className={TASK_COMPANION_SUGGESTION}
                         >
                           <div
-                            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
+                            className={TASK_COMPANION_AVATAR}
                             style={{ backgroundColor: c.color || "#64748b" }}
                           >
                             {getInitials(c.name)}
@@ -420,7 +473,7 @@ export default function TaskDetailsContent({
             </div>
 
             {/* Selected Companions List (Attached) */}
-            <div className="flex flex-wrap gap-2">
+            <div className={TASK_COMPANION_SELECTED_LIST}>
               {selectedCompanions.length > 0 ? (
                 <>
                   {selectedCompanions
@@ -429,19 +482,19 @@ export default function TaskDetailsContent({
                       <button
                         key={c.id}
                         onClick={() => handleToggleCompanion(c.id)}
-                        className="group flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border bg-indigo-600/20 border-indigo-500/50 text-indigo-200 hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-200 transition-all"
+                        className={TASK_COMPANION_PILL}
                         title={`Remove ${c.name}`}
                       >
                         <div className="relative w-4 h-4 flex items-center justify-center">
                           {/* Default: Initials Avatar */}
                           <div
-                            className="absolute inset-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm transition-opacity group-hover:opacity-0"
+                            className={TASK_COMPANION_PILL_AVATAR}
                             style={{ backgroundColor: c.color || "#64748b" }}
                           >
                             {getInitials(c.name)}
                           </div>
                           {/* Hover: X Icon */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className={TASK_COMPANION_PILL_ICON}>
                             <IconX className="w-3.5 h-3.5" />
                           </div>
                         </div>
@@ -453,7 +506,7 @@ export default function TaskDetailsContent({
                   {selectedCompanions.length > 5 && (
                     <button
                       onClick={() => setShowAllCompanions(!showAllCompanions)}
-                      className="px-2 py-1 rounded-full text-xs font-medium border bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors"
+                      className={TASK_COMPANION_SHOW_MORE_BUTTON}
                     >
                       {showAllCompanions
                         ? "Show Less"
@@ -473,14 +526,13 @@ export default function TaskDetailsContent({
         {/* Form Content */}
         <div>
           <TaskDetailsForm
-            kind={kind}
             initialValues={{
-              subtype: task.subtype,
               description: "", // TODO: Wire up description to task model
+              linksMarkdown: task.linksMarkdown,
             }}
             onChange={(values) => {
-              if (values.subtype !== task.subtype) {
-                onSubtypeChange?.(values.subtype);
+              if (values.linksMarkdown !== task.linksMarkdown) {
+                onLinksChange?.(values.linksMarkdown);
               }
               // Placeholder for other fields
             }}

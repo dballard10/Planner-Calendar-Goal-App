@@ -1,19 +1,16 @@
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  IconPlus,
-  IconDotsVertical,
-  IconTrash,
-  IconEdit,
-  IconTarget,
-  IconTrendingUp,
-  IconUsers,
-} from "@tabler/icons-react";
-import type { WeekState, Goal, Task } from "../../types/weekly";
+import { motion } from "framer-motion";
+import { IconPlus, IconUsers } from "@tabler/icons-react";
+import type { WeekState, Goal } from "../../types/weekly";
 import PageHeader from "../layout/PageHeader";
+import { PanelToggle } from "../layout/PanelToggle";
 import { computeWeekStats } from "../../lib/weekly/stats";
+import { RightSidePanel } from "../layout/RightSidePanel";
+import GoalDetailsPanel from "./GoalDetailsPanel";
+import GoalCard from "./GoalCard";
+import { TASK_CARD_CONTAINER } from "../weekly/taskStyles";
 
-interface GoalsAndStatsPageProps {
+interface GoalsPageProps {
   weekState: WeekState;
   actions: {
     addGoal: (name: string, emoji?: string) => void;
@@ -23,21 +20,24 @@ interface GoalsAndStatsPageProps {
     ) => void;
     deleteGoal: (id: string) => void;
   };
+  onOpenWeeklyTask?: (taskId: string) => void;
 }
 
-export default function GoalsAndStatsPage({
+export default function GoalsPage({
   weekState,
   actions,
-}: GoalsAndStatsPageProps) {
+  onOpenWeeklyTask,
+}: GoalsPageProps) {
   const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [newGoalName, setNewGoalName] = useState("");
   const [newGoalEmoji, setNewGoalEmoji] = useState("🎯");
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [isStatsPanelOpen, setIsStatsPanelOpen] = useState(false);
+  const [returnToStatsOnClose, setReturnToStatsOnClose] = useState(false);
 
   // Date Range State (Stub for now)
-  const [dateRange, setDateRange] = useState<"week" | "month" | "custom">(
-    "week"
-  );
+  const [dateRange, setDateRange] = useState<"week" | "month" | "year">("week");
 
   // Compute stats
   const weekStats = useMemo(() => computeWeekStats(weekState), [weekState]);
@@ -46,7 +46,11 @@ export default function GoalsAndStatsPage({
   const goalStats = useMemo(() => {
     return weekState.goals.map((goal) => {
       const linkedTasks = weekState.tasks.filter(
-        (t) => t.goalId === goal.id && t.status !== "cancelled" && !t.movedTo
+        (t) =>
+          t.goalIds &&
+          t.goalIds.includes(goal.id) &&
+          t.status !== "cancelled" &&
+          !t.movedTo
       );
       const total = linkedTasks.length;
       const completed = linkedTasks.filter(
@@ -87,7 +91,7 @@ export default function GoalsAndStatsPage({
       });
     });
 
-    let topCompanionId = null;
+    let topCompanionId: string | null = null;
     let maxCount = 0;
     Object.entries(companionCounts).forEach(([cid, count]) => {
       if (count > maxCount) {
@@ -102,6 +106,35 @@ export default function GoalsAndStatsPage({
 
     return { total, completed, failed, topCompanionName };
   }, [weekState.tasks, weekState.companions]);
+
+  const selectedGoal =
+    selectedGoalId && goalStats
+      ? goalStats.find((goal) => goal.id === selectedGoalId) ?? null
+      : null;
+
+  const selectedGoalLinkedTasks = selectedGoal
+    ? weekState.tasks
+        .filter(
+          (task) =>
+            task.goalIds?.includes(selectedGoal.id) &&
+            task.status !== "cancelled" &&
+            !task.movedTo
+        )
+        .sort((a, b) => {
+          if (a.dayIndex !== b.dayIndex) {
+            return a.dayIndex - b.dayIndex;
+          }
+          return a.position - b.position;
+        })
+    : [];
+
+  const handleSelectedGoalUpdate = (
+    updates: Partial<Omit<Goal, "id" | "createdAt">>
+  ) => {
+    if (selectedGoal) {
+      actions.updateGoal(selectedGoal.id, updates);
+    }
+  };
 
   const handleCreateGoal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,69 +151,47 @@ export default function GoalsAndStatsPage({
     setEditingGoalId(null);
   };
 
+  const handleToggleStatsPanel = () => {
+    if (isStatsPanelOpen) {
+      setIsStatsPanelOpen(false);
+      setReturnToStatsOnClose(false);
+    } else {
+      setIsStatsPanelOpen(true);
+      setSelectedGoalId(null);
+      setReturnToStatsOnClose(false);
+    }
+  };
+
+  const handleGoalSelect = (goalId: string) => {
+    setReturnToStatsOnClose(isStatsPanelOpen);
+    setIsStatsPanelOpen(false);
+    setSelectedGoalId(goalId);
+  };
+
+  const handleCloseGoalDetails = () => {
+    const shouldReturnToStats = returnToStatsOnClose;
+    setSelectedGoalId(null);
+    setReturnToStatsOnClose(false);
+    if (shouldReturnToStats) {
+      setIsStatsPanelOpen(true);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen pb-12">
-      <PageHeader title="Goals & Insights" />
+      <PageHeader
+        title="Goals"
+        rightContent={
+          <PanelToggle
+            isOpen={isStatsPanelOpen}
+            onClick={handleToggleStatsPanel}
+            label="Statistics panel"
+          />
+        }
+      />
 
-      <div className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column: Goals */}
+      <div className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6">
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
-              <IconTarget className="w-5 h-5 text-indigo-400" />
-              Goals
-            </h2>
-            <button
-              onClick={() => setIsAddGoalOpen(true)}
-              className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md flex items-center gap-2 text-sm transition-colors"
-            >
-              <IconPlus className="w-4 h-4" />
-              Add Goal
-            </button>
-          </div>
-
-          {isAddGoalOpen && (
-            <motion.form
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col gap-3"
-              onSubmit={handleCreateGoal}
-            >
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newGoalEmoji}
-                  onChange={(e) => setNewGoalEmoji(e.target.value)}
-                  className="w-12 p-2 bg-slate-900 border border-slate-700 rounded text-center text-xl focus:border-indigo-500 outline-none"
-                  placeholder="Emoji"
-                />
-                <input
-                  type="text"
-                  value={newGoalName}
-                  onChange={(e) => setNewGoalName(e.target.value)}
-                  className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded text-slate-100 focus:border-indigo-500 outline-none"
-                  placeholder="Goal name (e.g. Learn French)"
-                  autoFocus
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddGoalOpen(false)}
-                  className="px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded"
-                >
-                  Save
-                </button>
-              </div>
-            </motion.form>
-          )}
-
           <div className="grid gap-4">
             {goalStats.map((goal) => (
               <GoalCard
@@ -190,26 +201,90 @@ export default function GoalsAndStatsPage({
                 onDelete={actions.deleteGoal}
                 isEditing={editingGoalId === goal.id}
                 setEditingId={setEditingGoalId}
+                onSelect={() => handleGoalSelect(goal.id)}
               />
             ))}
-            {goalStats.length === 0 && !isAddGoalOpen && (
-              <div className="text-center p-8 border border-dashed border-slate-800 rounded-lg text-slate-500">
-                No goals yet. Add one to start tracking!
-              </div>
+
+            {isAddGoalOpen && (
+              <motion.form
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`${TASK_CARD_CONTAINER} bg-slate-800 p-4 rounded-xl flex flex-col gap-3 border border-slate-700`}
+                onSubmit={handleCreateGoal}
+              >
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newGoalEmoji}
+                    onChange={(e) => setNewGoalEmoji(e.target.value)}
+                    className="w-12 p-2 bg-slate-900 border border-slate-700 rounded text-center text-xl focus:border-indigo-500 outline-none"
+                    placeholder="Emoji"
+                  />
+                  <input
+                    type="text"
+                    value={newGoalName}
+                    onChange={(e) => setNewGoalName(e.target.value)}
+                    className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded text-slate-100 focus:border-indigo-500 outline-none"
+                    placeholder="Goal name (e.g. Learn French)"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddGoalOpen(false)}
+                    className="px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded"
+                  >
+                    Save
+                  </button>
+                </div>
+              </motion.form>
             )}
+
+            <div
+              className={`${TASK_CARD_CONTAINER} border border-slate-600 bg-slate-900/20 hover:border-slate-400 hover:bg-slate-900/35 shadow-sm transition-all`}
+            >
+              <button
+                type="button"
+                disabled={isAddGoalOpen}
+                onClick={() => setIsAddGoalOpen(true)}
+                className="group flex items-center gap-4 w-full px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-80"
+                aria-label="Add goal"
+              >
+                <span className="flex items-center justify-center w-12 h-12 rounded-full border border-slate-600 bg-slate-900 text-slate-200 shadow-sm transition-shadow group-hover:shadow-lg">
+                  <IconPlus className="w-5 h-5" />
+                </span>
+                <div className="flex-1">
+                  <p className="text-lg font-semibold text-slate-100">
+                    {goalStats.length === 0
+                      ? "Add your first goal"
+                      : "Add Goal"}
+                  </p>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Right Column: Statistics & Insights */}
-        <div className="space-y-8">
-          {/* Date Range Selector */}
+      <RightSidePanel
+        title="Statistics"
+        isOpen={isStatsPanelOpen}
+        onClose={() => {
+          setIsStatsPanelOpen(false);
+          setReturnToStatsOnClose(false);
+        }}
+      >
+        <div className="space-y-6 text-slate-300">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
-              <IconTrendingUp className="w-5 h-5 text-emerald-400" />
-              Statistics
-            </h2>
             <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
-              {(["week", "month", "custom"] as const).map((range) => (
+              {(["week", "month", "year"] as const).map((range) => (
                 <button
                   key={range}
                   onClick={() => setDateRange(range)}
@@ -235,8 +310,7 @@ export default function GoalsAndStatsPage({
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Core Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <MetricCard label="Total Tasks" value={weekStats.total.all} />
                 <MetricCard
                   label="Completed"
@@ -262,7 +336,6 @@ export default function GoalsAndStatsPage({
                 />
               </div>
 
-              {/* Tasks per Day Chart */}
               <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-800">
                 <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">
                   Activity by Day
@@ -295,7 +368,6 @@ export default function GoalsAndStatsPage({
                 </div>
               </div>
 
-              {/* Tasks per Goal */}
               <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-800">
                 <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">
                   Goal Progress
@@ -336,7 +408,6 @@ export default function GoalsAndStatsPage({
             </div>
           )}
 
-          {/* Companions Analytics Placeholder */}
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
               <IconUsers className="w-5 h-5 text-pink-400" />
@@ -361,12 +432,26 @@ export default function GoalsAndStatsPage({
                   </span>
                 </p>
               </div>
-              {/* Decorative background blob */}
               <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
             </div>
           </div>
         </div>
-      </div>
+      </RightSidePanel>
+
+      <RightSidePanel
+        title="Goal Details"
+        isOpen={!!selectedGoal}
+        onClose={handleCloseGoalDetails}
+      >
+        {selectedGoal && (
+          <GoalDetailsPanel
+            goal={selectedGoal}
+            linkedTasks={selectedGoalLinkedTasks}
+            onUpdate={handleSelectedGoalUpdate}
+            onOpenTask={onOpenWeeklyTask}
+          />
+        )}
+      </RightSidePanel>
     </div>
   );
 }
@@ -389,116 +474,3 @@ function MetricCard({
     </div>
   );
 }
-
-interface GoalCardProps {
-  goal: Goal & {
-    stats: { completionRate: number; completed: number; total: number };
-  };
-  onUpdate: (id: string, name: string, emoji: string) => void;
-  onDelete: (id: string) => void;
-  isEditing: boolean;
-  setEditingId: (id: string | null) => void;
-}
-
-function GoalCard({
-  goal,
-  onUpdate,
-  onDelete,
-  isEditing,
-  setEditingId,
-}: GoalCardProps) {
-  const [editName, setEditName] = useState(goal.name);
-  const [editEmoji, setEditEmoji] = useState(goal.emoji || "🎯");
-
-  if (isEditing) {
-    return (
-      <div className="bg-slate-800 p-4 rounded-xl border border-indigo-500/50 shadow-lg flex flex-col gap-3">
-        <div className="flex gap-2">
-          <input
-            className="w-12 bg-slate-900 border border-slate-600 rounded p-1 text-center text-lg outline-none focus:border-indigo-500"
-            value={editEmoji}
-            onChange={(e) => setEditEmoji(e.target.value)}
-          />
-          <input
-            className="flex-1 bg-slate-900 border border-slate-600 rounded p-1 px-3 text-slate-100 outline-none focus:border-indigo-500"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            autoFocus
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => setEditingId(null)}
-            className="px-2 py-1 text-xs text-slate-400 hover:text-slate-200"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onUpdate(goal.id, editName, editEmoji)}
-            className="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-500"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 p-4 rounded-xl transition-all group relative">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-xl">
-            {goal.emoji}
-          </div>
-          <div>
-            <h3 className="font-medium text-slate-200">{goal.name}</h3>
-            <div className="text-xs text-slate-400 mt-0.5">
-              {goal.stats.total} linked tasks
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => {
-              setEditName(goal.name);
-              setEditEmoji(goal.emoji || "🎯");
-              setEditingId(goal.id);
-            }}
-            className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-700 rounded"
-            title="Edit"
-          >
-            <IconEdit className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => confirm("Delete this goal?") && onDelete(goal.id)}
-            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded"
-            title="Delete"
-          >
-            <IconTrash className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="space-y-1">
-        <div className="flex justify-between text-xs text-slate-400">
-          <span>Week Progress</span>
-          <span>{goal.stats.completionRate}%</span>
-        </div>
-        <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${goal.stats.completionRate}%` }}
-            className={`h-full rounded-full ${
-              goal.stats.completionRate === 100
-                ? "bg-emerald-500"
-                : "bg-indigo-500"
-            }`}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
