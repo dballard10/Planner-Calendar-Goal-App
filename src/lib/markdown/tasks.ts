@@ -1,10 +1,11 @@
-import type { Task, TaskStatus, WeekState, Group } from "../../types/weekly";
+import type { Task, TaskStatus, WeekState, Group, WeeklyItemType } from "../../types/weekly";
 
 export type MarkdownTaskStatusToken = "[ ]" | "[x]" | "[>]" | "[-]" | "[?]";
 
 export interface MarkdownTask {
   status: TaskStatus;
   title: string;
+  type: WeeklyItemType;
 }
 
 export const taskStatusToToken = (
@@ -44,13 +45,22 @@ export const tokenToTaskStatus = (token: string): TaskStatus => {
 const TASK_LINE_REGEX = /^(\s*)([-*])\s+\[( |x|>|\-|\?)\]\s+(.*)$/;
 const GROUP_HEADER_REGEX = /^#{4}\s+Group:\s+(.*)$/;
 
+const TYPE_MARKER_REGEX = /^\[(task|event|birthday|holiday)\]\s+/i;
+
 export const parseMarkdownTaskLine = (line: string): MarkdownTask | null => {
   const match = line.match(TASK_LINE_REGEX);
   if (!match) return null;
 
   // match[1] is indent, match[2] is bullet char
   const rawToken = match[3];
-  const title = match[4].trim();
+  let title = match[4].trim();
+
+  const markerMatch = title.match(TYPE_MARKER_REGEX);
+  let type: WeeklyItemType = "task";
+  if (markerMatch) {
+    type = markerMatch[1].toLowerCase() as WeeklyItemType;
+    title = title.replace(markerMatch[0], "").trim();
+  }
 
   const token: MarkdownTaskStatusToken =
     rawToken === " " ? "[ ]" : (`[${rawToken}]` as MarkdownTaskStatusToken);
@@ -58,13 +68,16 @@ export const parseMarkdownTaskLine = (line: string): MarkdownTask | null => {
   return {
     status: tokenToTaskStatus(token),
     title,
+    type,
   };
 };
 
 export const serializeMarkdownTask = (task: MarkdownTask): string => {
   const token = taskStatusToToken(task.status);
   const title = task.title.trim() || "New task...";
-  return `- ${token} ${title}`;
+  const typeMarker =
+    task.type && task.type !== "task" ? `[${task.type}] ` : "";
+  return `- ${token} ${typeMarker}${title}`;
 };
 
 export const taskToMarkdownLine = (task: Task): string => {
@@ -260,7 +273,7 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
 
       tasks.push({
         id: getOrCreateId(),
-        type: "task",
+        type: parsed.type,
         title: parsed.title,
         status: parsed.status,
         dayIndex: currentDayIndex,

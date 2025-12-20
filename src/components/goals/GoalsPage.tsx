@@ -8,7 +8,7 @@ import { computeWeekStats } from "../../lib/weekly/stats";
 import { RightSidePanel } from "../layout/RightSidePanel";
 import GoalDetailsPanel from "./GoalDetailsPanel";
 import GoalCard from "./GoalCard";
-import { TASK_CARD_CONTAINER } from "../weekly/taskStyles";
+import { TASK_CARD_CONTAINER } from "../weekly/styles/taskCardStyles";
 
 interface GoalsPageProps {
   weekState: WeekState;

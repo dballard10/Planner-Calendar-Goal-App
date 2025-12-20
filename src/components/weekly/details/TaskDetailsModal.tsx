@@ -6,7 +6,7 @@ import type {
   WeeklyItemType,
   Goal,
   Companion,
-} from "../../types/weekly";
+} from "../../../types/weekly";
 import TaskDetailsContent from "./TaskDetailsContent";
 import { IconX } from "@tabler/icons-react";
 import {
@@ -15,7 +15,7 @@ import {
   TASK_MODAL_OVERLAY,
   TASK_MODAL_CLOSE_BUTTON,
   TASK_MODAL_VIEWPORT,
-} from "./taskStyles";
+} from "../styles";
 
 interface TaskDetailsModalProps {
   task: Task;

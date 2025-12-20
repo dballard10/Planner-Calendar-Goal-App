@@ -5,14 +5,14 @@ import type {
   WeeklyItemType,
   Goal,
   Companion,
-} from "../../types/weekly";
+} from "../../../types/weekly";
 import TaskDetailsContent from "./TaskDetailsContent";
 import {
   TASK_DETAILS_PAGE_CONTAINER,
   TASK_DETAILS_PAGE_CONTENT_WRAPPER,
   TASK_DETAILS_PAGE_HEADER,
   TASK_DETAILS_PAGE_HEADER_BUTTON,
-} from "./taskStyles";
+} from "../styles";
 
 interface TaskDetailsFullPageProps {
   task: Task;

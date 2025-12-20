@@ -13,7 +13,7 @@ import {
   TASK_CARD_TITLE_WRAPPER,
   TASK_DELETE_BUTTON,
   getTaskCardStyleClass,
-} from "../weekly/taskStyles";
+} from "../weekly/styles/taskCardStyles";
 
 export interface GoalCardProps {
   goal: Goal & {

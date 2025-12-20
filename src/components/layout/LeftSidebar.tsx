@@ -101,34 +101,39 @@ export function LeftSidebar({
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const handleTabClick = () => {
+            onTabChange(tab.id);
+          };
           return (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`flex items-center p-2 rounded-md transition-colors w-full ${
-                isActive
-                  ? "bg-slate-800 text-slate-100"
-                  : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
-              }`}
-              title={!isOpen ? tab.label : undefined}
-            >
-              <div className="flex items-center justify-center min-w-[28px]">
-                <Icon className="w-5 h-5" />
-              </div>
-              {/* Label */}
-              <motion.span
-                animate={{
-                  opacity: isOpen ? 1 : 0,
-                  width: isOpen ? "auto" : 0,
-                }}
-                className="ml-3 text-sm font-medium whitespace-nowrap overflow-hidden"
+            <div key={tab.id}>
+              <button
+                onClick={handleTabClick}
+                className={`flex items-center p-2 rounded-md transition-colors w-full ${
+                  isActive
+                    ? "bg-slate-800 text-slate-100"
+                    : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+                }`}
+                title={!isOpen ? tab.label : undefined}
               >
-                {tab.label}
-              </motion.span>
-            </button>
+                <div className="flex items-center justify-center min-w-[28px]">
+                  <Icon className="w-5 h-5" />
+                </div>
+                {/* Label */}
+                <motion.span
+                  animate={{
+                    opacity: isOpen ? 1 : 0,
+                    width: isOpen ? "auto" : 0,
+                  }}
+                  className="ml-3 text-sm font-medium whitespace-nowrap overflow-hidden"
+                >
+                  {tab.label}
+                </motion.span>
+              </button>
+            </div>
           );
         })}
       </nav>
+
       {/* Footer toggle removed */}
     </motion.div>
   );

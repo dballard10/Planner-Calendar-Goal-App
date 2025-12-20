@@ -2,18 +2,16 @@ import {
   IconCircle,
   IconCircleCheck,
   IconCircleX,
-  IconCircleArrowRight,
   IconCircleMinus,
 } from "@tabler/icons-react";
 import {
   useEffect,
-  useState,
   useRef,
   type ReactNode,
-  useCallback,
 } from "react";
 import { createPortal } from "react-dom";
-import type { TaskStatus } from "../../types/weekly";
+import type { TaskStatus } from "../../../types/weekly";
+import { useAnchoredMenu } from "../shared/useAnchoredMenu";
 
 interface StatusSelectorProps {
   status: TaskStatus;
@@ -62,73 +60,27 @@ export default function StatusSelector({
   status,
   onChange,
 }: StatusSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  const updatePosition = useCallback(() => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const menuWidth = 144; // w-36 is 144px
-      const viewportWidth = window.innerWidth;
-
-      // Align left edge with button by default
-      let left = rect.left;
-
-      // If it overflows right, align right edge with viewport or push it left
-      if (left + menuWidth > viewportWidth - 8) {
-        left = viewportWidth - menuWidth - 8;
-      }
-      // Ensure it doesn't go off screen to the left
-      if (left < 8) {
-        left = 8;
-      }
-
-      const top = rect.bottom + 4;
-      setMenuPosition({ top, left });
-    }
-  }, []);
+  const { isOpen, position, toggle, close } = useAnchoredMenu({
+    resolveAnchor: () => buttonRef.current,
+    menuWidth: 144,
+  });
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
-        setIsOpen(false);
+        close();
       }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen]);
-
-  // Update position on scroll/resize while menu is open
-  useEffect(() => {
-    if (isOpen) {
-      updatePosition();
-      window.addEventListener("scroll", updatePosition, true);
-      window.addEventListener("resize", updatePosition);
-      return () => {
-        window.removeEventListener("scroll", updatePosition, true);
-        window.removeEventListener("resize", updatePosition);
-      };
-    }
-  }, [isOpen, updatePosition]);
-
-  const toggleMenu = () => {
-    if (isOpen) {
-      setIsOpen(false);
-      return;
-    }
-    updatePosition();
-    setIsOpen(true);
-  };
+  }, [close, isOpen]);
 
   const current = getIconForStatus(status);
 
   const handleSelect = (next: TaskStatus) => {
     onChange(next);
-    setIsOpen(false);
+    close();
   };
 
   return (
@@ -138,19 +90,19 @@ export default function StatusSelector({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        onClick={toggleMenu}
+        onClick={toggle}
         className="flex items-center justify-center p-1 text-slate-200 hover:text-slate-100 hover:scale-105 rounded transition-colors"
       >
         <span className={current.iconClass}>{current.icon}</span>
       </button>
 
       {isOpen &&
-        menuPosition &&
+        position &&
         createPortal(
-          <div className="fixed inset-0 z-50" onClick={() => setIsOpen(false)}>
+          <div className="fixed inset-0 z-50" onClick={close}>
             <div
               className="absolute w-36 rounded bg-slate-900 border border-slate-700 shadow-lg"
-              style={{ top: menuPosition.top, left: menuPosition.left }}
+              style={{ top: position.top, left: position.left }}
               onClick={(e) => e.stopPropagation()}
             >
               <div role="listbox" aria-label="Select status" className="py-1">

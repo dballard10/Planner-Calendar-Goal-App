@@ -4,17 +4,14 @@ import {
   IconFilter,
   IconSettings,
 } from "@tabler/icons-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useAnchoredMenu } from "../shared/useAnchoredMenu";
 
 type MenuType = "sort" | "filter" | "settings" | null;
 
 export default function DayCardSettings() {
   const [openMenu, setOpenMenu] = useState<MenuType>(null);
-  const [menuPosition, setMenuPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -33,39 +30,19 @@ export default function DayCardSettings() {
     }
   };
 
-  const updatePosition = useCallback(() => {
-    if (!openMenu) return;
-    const ref = getRefForMenu(openMenu);
-    if (ref?.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const menuWidth = openMenu === "settings" ? 160 : 128; // w-40 is 160px, w-32 is 128px
-      const viewportWidth = window.innerWidth;
+  const currentMenuWidth = openMenu === "settings" ? 160 : 128;
+  const { position, open, close } = useAnchoredMenu({
+    resolveAnchor: () => getRefForMenu(openMenu)?.current ?? null,
+    menuWidth: currentMenuWidth,
+  });
 
-      let left = rect.left;
-      if (left + menuWidth > viewportWidth - 8) {
-        left = viewportWidth - menuWidth - 8;
-      }
-      if (left < 8) left = 8;
-
-      setMenuPosition({
-        top: rect.bottom + 4,
-        left: left,
-      });
-    }
-  }, [openMenu]);
-
-  // Handle position updates
   useEffect(() => {
     if (openMenu) {
-      updatePosition();
-      window.addEventListener("scroll", updatePosition, true);
-      window.addEventListener("resize", updatePosition);
-      return () => {
-        window.removeEventListener("scroll", updatePosition, true);
-        window.removeEventListener("resize", updatePosition);
-      };
+      open();
+    } else {
+      close();
     }
-  }, [openMenu, updatePosition]);
+  }, [close, open, openMenu]);
 
   // Close menus when clicking outside (handled by portal overlay for click-away)
   // For hover logic, we use onMouseLeave with a delay
@@ -90,11 +67,12 @@ export default function DayCardSettings() {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && openMenu) {
         setOpenMenu(null);
+        close();
       }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [openMenu]);
+  }, [close, openMenu]);
 
   return (
     <div ref={containerRef} className="relative flex items-center group z-20">
@@ -178,7 +156,7 @@ export default function DayCardSettings() {
 
       {/* Portal Dropdowns */}
       {openMenu &&
-        menuPosition &&
+        position &&
         createPortal(
           <div
             className="fixed inset-0 z-50 pointer-events-none" // pointer-events-none allows clicks through to background if not hitting menu
@@ -188,7 +166,7 @@ export default function DayCardSettings() {
               className={`absolute rounded bg-slate-900 border border-slate-700 shadow-lg overflow-hidden pointer-events-auto ${
                 openMenu === "settings" ? "w-40" : "w-32"
               }`}
-              style={{ top: menuPosition.top, left: menuPosition.left }}
+              style={{ top: position.top, left: position.left }}
               onMouseEnter={() => {
                 if (closeTimeoutRef.current) {
                   clearTimeout(closeTimeoutRef.current);

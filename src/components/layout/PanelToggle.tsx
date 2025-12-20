@@ -1,18 +1,22 @@
 import { IconLayoutSidebarRight } from "@tabler/icons-react";
+import type { ComponentType } from "react";
 
 interface PanelToggleProps {
   onClick: () => void;
   isOpen?: boolean;
   className?: string;
   label?: string;
+  icon?: ComponentType<{ className?: string }>;
 }
 
 export function PanelToggle({ 
   onClick, 
   isOpen = false, 
   className = "",
-  label = "Toggle panel"
+  label = "Toggle panel",
+  icon,
 }: PanelToggleProps) {
+  const Icon = icon ?? IconLayoutSidebarRight;
   return (
     <button
       onClick={onClick}
@@ -25,7 +29,7 @@ export function PanelToggle({
       aria-expanded={isOpen}
       title={label}
     >
-      <IconLayoutSidebarRight className="w-5 h-5" />
+      <Icon className="w-5 h-5" />
     </button>
   );
 }

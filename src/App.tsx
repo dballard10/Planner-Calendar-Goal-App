@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
-import WeeklyView from "./components/weekly/WeeklyView";
+import WeeklyView from "./components/weekly/WeeklyView/WeeklyView";
 import CalendarView from "./components/calendar/CalendarView";
 import GoalsPage from "./components/goals/GoalsPage";
 import CompanionsPage from "./components/goals/CompanionsPage";
 import { AppShellLayout } from "./components/layout/AppShellLayout";
-import { useWeekState } from "./hooks/useWeekState";
+import { useWeekState, getMostRecentSunday, formatDateISO } from "./hooks/useWeekState";
 import { convertWeekToCalendarEvents } from "./lib/calendar/eventAdapters";
+import { availableMockWeekStartsISO } from "./mock/weeks";
 
 function App() {
   const [activeTab, setActiveTab] = useState("weekly");
@@ -19,19 +20,36 @@ function App() {
     setActiveTab("weekly");
   };
 
+  const handleTabChange = (nextTab: string) => {
+    if (nextTab === "weekly" && activeTab !== "weekly") {
+      actions.setWeekStart(formatDateISO(getMostRecentSunday()));
+      setActiveTab("weekly");
+      return;
+    }
+    setActiveTab(nextTab);
+  };
+
   // Convert weekly tasks to calendar events
   const calendarEvents = useMemo(() => {
     return convertWeekToCalendarEvents(weekState);
   }, [weekState]);
 
   return (
-    <AppShellLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <AppShellLayout
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+    >
       {activeTab === "weekly" && (
         <WeeklyView
           weekState={weekState}
           actions={actions}
           openTaskId={pendingWeeklyTaskId}
           onOpenTaskHandled={() => setPendingWeeklyTaskId(null)}
+          availableWeekStartsISO={availableMockWeekStartsISO}
+          onSelectWeekStart={(iso) => {
+            actions.setWeekStart(iso);
+            setActiveTab("weekly");
+          }}
         />
       )}
       {activeTab === "calendar" && <CalendarView events={calendarEvents} />}

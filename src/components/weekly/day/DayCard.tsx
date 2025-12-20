@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   Task,
@@ -6,12 +6,12 @@ import type {
   Group,
   Goal,
   Companion,
-} from "../../types/weekly";
+} from "../../../types/weekly";
 import DayCardHeader from "./DayCardHeader";
-import TaskCard from "./TaskCard";
+import TaskCard from "../task/TaskCard";
 import AddButton from "./AddButton";
 import DayCardSettings from "./DayCardSettings";
-import GroupCard from "./GroupCard";
+import GroupCard from "../group/GroupCard";
 
 interface DayCardProps {
   dayIndex: number;
@@ -68,10 +68,23 @@ export default function DayCard({
   // Separate root tasks from group tasks (if caller hasn't already filtered)
   // Assuming 'tasks' prop passed here might contain all tasks for the day
   // But WeeklyView filters by dayIndex. We need to filter by groupId here.
-  const rootTasks = tasks.filter((t) => !t.groupId);
-
-  // For each group, we find its tasks
-  // Note: WeeklyView passes `tasks` filtered by dayIndex.
+  const rootTasks = useMemo(() => tasks.filter((t) => !t.groupId), [tasks]);
+  const tasksByGroupId = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    tasks.forEach((task) => {
+      if (!task.groupId) return;
+      const list = map.get(task.groupId) ?? [];
+      list.push(task);
+      map.set(task.groupId, list);
+    });
+    map.forEach((list, key) =>
+      map.set(
+        key,
+        [...list].sort((a, b) => a.position - b.position)
+      )
+    );
+    return map;
+  }, [tasks]);
 
   return (
     <div className="flex flex-col bg-slate-1000 rounded-lg border border-slate-700 max-w-5xl transition-all duration-300 ease-in-out">
@@ -108,9 +121,7 @@ export default function DayCard({
         <AnimatePresence initial={false} mode="popLayout">
           {/* Render Groups First (or interleaved based on position if supported later) */}
           {groups.map((group) => {
-            const groupTasks = tasks
-              .filter((t) => t.groupId === group.id)
-              .sort((a, b) => a.position - b.position);
+            const groupTasks = tasksByGroupId.get(group.id) ?? [];
             return (
               <motion.div
                 key={group.id}

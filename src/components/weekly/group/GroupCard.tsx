@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { IconPlus } from "@tabler/icons-react";
-import type { Task, Group, Goal, Companion } from "../../types/weekly";
-import TaskCard from "./TaskCard";
+import type {
+  Task,
+  Group,
+  Goal,
+  Companion,
+  TaskStatus,
+} from "../../../types/weekly";
+import TaskCard from "../task/TaskCard";
 
 interface GroupCardProps {
   group: Group;
@@ -12,7 +18,7 @@ interface GroupCardProps {
   onUpdateTitle: (groupId: string, title: string) => void;
   onDeleteGroup: (groupId: string) => void;
   // Pass-through props for tasks
-  onUpdateTaskStatus: (id: string, status: any) => void;
+  onUpdateTaskStatus: (id: string, status: TaskStatus) => void;
   onUpdateTaskTitle: (id: string, title: string) => void;
   onDeleteTask: (id: string) => void;
   onOpenDetailsSidePanel?: (taskId: string) => void;

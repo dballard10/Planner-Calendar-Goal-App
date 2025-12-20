@@ -7,7 +7,11 @@ interface AppShellLayoutProps {
   onTabChange: (tab: string) => void;
 }
 
-export function AppShellLayout({ children, activeTab, onTabChange }: AppShellLayoutProps) {
+export function AppShellLayout({
+  children,
+  activeTab,
+  onTabChange,
+}: AppShellLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (

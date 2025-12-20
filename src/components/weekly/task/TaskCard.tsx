@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import type { Task, TaskStatus, Goal, Companion } from "../../types/weekly";
+import type { Task, TaskStatus, Goal, Companion } from "../../../types/weekly";
 import { IconTrash } from "@tabler/icons-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import StatusSelector from "./StatusSelector";
 import {
   ITEM_TYPE_STYLES,
   INFORMATIONAL_TYPES,
-} from "../../lib/itemTypeConfig";
-import EmojiCircleStack from "../ui/EmojiCircleStack";
+} from "../../../lib/itemTypeConfig";
+import EmojiCircleStack from "../../ui/EmojiCircleStack";
 import {
   TASK_CARD_BODY,
   TASK_CARD_CONTAINER,
@@ -20,7 +18,9 @@ import {
   TASK_INDICATOR_GROUP,
   TASK_KIND_BADGE,
   getTaskCardStyleClass,
-} from "./taskStyles";
+} from "../styles";
+import { InlineMarkdown } from "../shared/InlineMarkdown";
+import { getInitials } from "../utils/name";
 
 interface TaskCardProps {
   task: Task;
@@ -36,16 +36,6 @@ interface TaskCardProps {
 }
 
 const PLACEHOLDER_TEXT = "New task...";
-
-// Helper to get initials
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 export default function TaskCard({
   task,
@@ -216,14 +206,13 @@ export default function TaskCard({
                 }}
                 className={TASK_CARD_TITLE_DISPLAY}
               >
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={markdownComponents}
-                >
-                  {task.title.length > 100
-                    ? `${task.title.slice(0, 100)}...`
-                    : task.title}
-                </ReactMarkdown>
+                <InlineMarkdown
+                  content={
+                    task.title.length > 100
+                      ? `${task.title.slice(0, 100)}...`
+                      : task.title
+                  }
+                />
               </div>
             </div>
           )}

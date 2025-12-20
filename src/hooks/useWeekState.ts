@@ -9,6 +9,8 @@ import type {
   Companion,
 } from "../types/weekly";
 import { GOAL_ACCENT_COLORS } from "../components/goals/goalStyles";
+import { parseWeeklyMarkdown } from "../lib/markdown/tasks";
+import { mockWeekMarkdownByStartISO } from "../mock/weeks";
 
 // Helper to get the most recent Sunday
 export function getMostRecentSunday(): Date {
@@ -278,14 +280,35 @@ function createMockData(weekStart: string): {
   };
 }
 
+function loadWeekStateForStart(weekStart: string): WeekState {
+  const markdown = mockWeekMarkdownByStartISO[weekStart];
+  const fallback = createMockData(weekStart);
+
+  if (!markdown) {
+    return {
+      weekStart,
+      ...fallback,
+    };
+  }
+
+  const parsed = parseWeeklyMarkdown(markdown);
+
+  return {
+    weekStart,
+    tasks: parsed.tasks,
+    groups: parsed.groups,
+    goals: fallback.goals,
+    companions: fallback.companions,
+  };
+}
+
 export function useWeekState() {
   const weekStartDate = getMostRecentSunday();
   const weekStartISO = formatDateISO(weekStartDate);
 
-  const [weekState, setWeekState] = useState<WeekState>({
-    weekStart: weekStartISO,
-    ...createMockData(weekStartISO),
-  });
+  const [weekState, setWeekState] = useState<WeekState>(() =>
+    loadWeekStateForStart(weekStartISO)
+  );
 
   // Helper to create a task ID (UUID-like)
   const generateId = () => {
@@ -512,6 +535,10 @@ export function useWeekState() {
     }));
   };
 
+  const setWeekStart = (weekStartISO: string) => {
+    setWeekState(loadWeekStateForStart(weekStartISO));
+  };
+
   return {
     weekState,
     setWeekState,
@@ -536,6 +563,7 @@ export function useWeekState() {
       // Linking Actions
       setTaskGoals,
       setTaskCompanions,
+      setWeekStart,
     },
   };
 }
