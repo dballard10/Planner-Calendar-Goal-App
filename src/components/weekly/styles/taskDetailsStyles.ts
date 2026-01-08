@@ -21,7 +21,7 @@ export const TASK_TYPE_SELECTOR_LABEL =
   "flex flex-col gap-2 text-xs text-slate-500 font-medium uppercase tracking-wider";
 export const TASK_TYPE_SELECTOR_BUTTONS = "flex flex-wrap gap-2";
 export const TASK_TYPE_BUTTON_BASE =
-  "px-3 py-1 rounded text-xs font-semibold uppercase tracking-wide transition-all";
+  "px-3 py-1 rounded text-xs font-semibold uppercase tracking-wide transition-all hover:ring-1 hover:ring-slate-500/60 hover:ring-inset";
 export const TASK_TYPE_BUTTON_SELECTED = "shadow-sm";
 export const TASK_TYPE_BUTTON_UNSELECTED =
   "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-900/60";
@@ -32,10 +32,20 @@ export const TASK_LINKS_GRID =
 export const TASK_GOAL_SELECTOR = "space-y-2 relative";
 export const TASK_GOAL_SELECTOR_LABEL =
   "flex items-center gap-2 text-sm font-medium text-slate-400";
-export const TASK_GOAL_TRIGGER =
+export const TASK_SELECTOR_TRIGGER =
   "w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 outline-none hover:border-slate-600 cursor-pointer flex items-center justify-between transition-colors min-h-[38px]";
-export const TASK_GOAL_DROPDOWN =
+export const TASK_GOAL_TRIGGER = TASK_SELECTOR_TRIGGER;
+export const TASK_SELECTOR_DROPDOWN =
   "absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto z-30 ring-1 ring-slate-800 animate-in fade-in zoom-in-95 duration-100";
+export const TASK_GOAL_DROPDOWN = TASK_SELECTOR_DROPDOWN;
+
+export const TASK_SELECTOR_SEARCH_WRAPPER =
+  "sticky top-0 z-10 bg-slate-900 border-b border-slate-800 p-2";
+export const TASK_SELECTOR_SEARCH_INPUT =
+  "w-full bg-slate-800 border border-slate-700 rounded-md pl-8 pr-3 py-1.5 text-xs text-slate-200 outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-500";
+export const TASK_SELECTOR_SEARCH_ICON =
+  "absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500";
+
 export const TASK_GOAL_BUTTON =
   "w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors text-left group";
 export const TASK_GOAL_BUTTON_SELECTED = "bg-indigo-600/10 text-indigo-200";
@@ -49,14 +59,13 @@ export const TASK_GOAL_PILL_AVATAR_BORDER =
 export const TASK_GOAL_PILL_REMOVE_ICON =
   "absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
 
-export const TASK_COMPANION_SELECTOR = "space-y-3 relative";
+export const TASK_COMPANION_SELECTOR = "space-y-2 relative";
 export const TASK_COMPANION_LABEL =
   "flex items-center gap-2 text-sm font-medium text-slate-400";
+export const TASK_COMPANION_TRIGGER = TASK_SELECTOR_TRIGGER;
+export const TASK_COMPANION_DROPDOWN = TASK_SELECTOR_DROPDOWN;
 export const TASK_COMPANION_INPUT_WRAPPER = "relative z-20";
-export const TASK_COMPANION_INPUT =
-  "w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-sm text-slate-200 outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600";
-export const TASK_COMPANION_DROPDOWN =
-  "absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto z-30 ring-1 ring-slate-800";
+export const TASK_COMPANION_INPUT = TASK_SELECTOR_SEARCH_INPUT;
 export const TASK_COMPANION_SUGGESTION =
   "w-full flex items-center gap-2 px-2 py-1.5 hover:bg-slate-800 rounded transition-colors text-left group";
 export const TASK_COMPANION_AVATAR =
@@ -72,4 +81,5 @@ export const TASK_COMPANION_SHOW_MORE_BUTTON =
   "px-2 py-1 rounded-full text-xs font-medium border bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors";
 
 export const TASK_FORM_WRAPPER = "flex-1 px-4 pb-4 pt-6 space-y-6";
+
 

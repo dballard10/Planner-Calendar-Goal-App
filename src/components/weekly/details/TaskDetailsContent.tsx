@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import type {
   Task,
   TaskStatus,
+  TaskLocation,
   WeeklyItemType,
   Goal,
   Companion,
@@ -27,6 +28,7 @@ import {
 } from "../styles";
 import { GoalMultiSelect } from "./GoalMultiSelect";
 import { CompanionSelector } from "./CompanionSelector";
+import { useAppSettings } from "../../../context/AppSettingsContext";
 
 interface TaskDetailsContentProps {
   task: Task;
@@ -38,6 +40,7 @@ interface TaskDetailsContentProps {
   onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
+  onLocationChange?: (location?: TaskLocation) => void;
 }
 
 // Helper to get initials
@@ -60,7 +63,9 @@ export default function TaskDetailsContent({
   onGoalsChange,
   onCompanionsChange,
   onLinksChange,
+  onLocationChange,
 }: TaskDetailsContentProps) {
+  const settings = useAppSettings();
   // We can initialize the form with data from the task later.
   // For now, we just pass the task title if we want, or rely on internal form state.
 
@@ -169,6 +174,7 @@ export default function TaskDetailsContent({
             <div className={TASK_TYPE_SELECTOR_BUTTONS}>
               {typeOptions.map(([optionType, style]) => {
                 const isSelected = type === optionType;
+                const dynamicColor = settings.itemTypeColors[optionType];
                 return (
                   <button
                     key={optionType}
@@ -179,9 +185,19 @@ export default function TaskDetailsContent({
                     }}
                     className={`${TASK_TYPE_BUTTON_BASE} ${
                       isSelected
-                        ? `${style.pillBackground} ${style.badgeText} ${TASK_TYPE_BUTTON_SELECTED}`
+                        ? TASK_TYPE_BUTTON_SELECTED
                         : TASK_TYPE_BUTTON_UNSELECTED
                     }`}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: `${dynamicColor}33`,
+                            borderColor: `${dynamicColor}66`,
+                            color: dynamicColor,
+                            border: `1px solid ${dynamicColor}66`,
+                          }
+                        : undefined
+                    }
                     title={style.label}
                   >
                     {style.label}
@@ -221,13 +237,15 @@ export default function TaskDetailsContent({
             initialValues={{
               description: "", // TODO: Wire up description to task model
               linksMarkdown: task.linksMarkdown,
+              location: task.location,
             }}
             onChange={(values) => {
               if (values.linksMarkdown !== task.linksMarkdown) {
                 onLinksChange?.(values.linksMarkdown);
               }
-              // Placeholder for other fields
+              // Location changes are handled via a separate callback
             }}
+            onLocationChange={onLocationChange}
           />
         </div>
       </div>

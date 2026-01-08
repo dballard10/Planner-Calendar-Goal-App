@@ -8,7 +8,7 @@ import getDay from "date-fns/getDay";
 import enUS from "date-fns/locale/en-US";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import type { CalendarEvent, CalendarViewMode } from "../../types/calendar";
-import { ITEM_TYPE_STYLES } from "../../lib/itemTypeConfig";
+import { useAppSettings } from "../../context/AppSettingsContext";
 
 const locales = {
   "en-US": enUS,
@@ -40,6 +40,8 @@ export default function BigCalendarShell({
   onNavigate,
   onViewChange,
 }: BigCalendarShellProps) {
+  const settings = useAppSettings();
+
   // Map our ViewMode to RBC View
   // RBC views: 'month', 'week', 'work_week', 'day', 'agenda'
   const rbcView = viewMode === "year" ? "month" : viewMode; // Fallback, though year shouldn't be here
@@ -55,11 +57,11 @@ export default function BigCalendarShell({
   }));
 
   const eventPropGetter = ({ resource }: { resource: CalendarEvent }) => {
-    const style = ITEM_TYPE_STYLES[resource.type] ?? ITEM_TYPE_STYLES.task;
+    const colorHex = settings.itemTypeColors[resource.type] ?? settings.itemTypeColors.task;
     return {
       style: {
-        backgroundColor: style.colorHex,
-        borderColor: style.colorHex,
+        backgroundColor: colorHex,
+        borderColor: colorHex,
         color: "#fff",
       },
     };

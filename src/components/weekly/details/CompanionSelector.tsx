@@ -1,22 +1,28 @@
 import { useMemo, useRef, useState } from "react";
-import { IconUsers, IconSearch, IconX } from "@tabler/icons-react";
+import {
+  IconUsers,
+  IconSearch,
+  IconX,
+  IconChevronDown,
+} from "@tabler/icons-react";
 import type { Companion } from "../../../types/weekly";
 import {
-  TASK_COMPANION_AVATAR,
   TASK_COMPANION_DROPDOWN,
-  TASK_COMPANION_INPUT,
-  TASK_COMPANION_INPUT_WRAPPER,
   TASK_COMPANION_LABEL,
   TASK_COMPANION_PILL,
-  TASK_COMPANION_PILL_AVATAR,
   TASK_COMPANION_PILL_ICON,
   TASK_COMPANION_SELECTED_LIST,
   TASK_COMPANION_SELECTOR,
   TASK_COMPANION_SHOW_MORE_BUTTON,
   TASK_COMPANION_SUGGESTION,
+  TASK_COMPANION_TRIGGER,
+  TASK_SELECTOR_SEARCH_ICON,
+  TASK_SELECTOR_SEARCH_INPUT,
+  TASK_SELECTOR_SEARCH_WRAPPER,
 } from "../styles";
 import { useClickOutside } from "../shared/useClickOutside";
 import { getInitials } from "../utils/name";
+import Avatar from "../../ui/Avatar";
 
 interface CompanionSelectorProps {
   companions: Companion[];
@@ -36,7 +42,10 @@ export function CompanionSelector({
 
   useClickOutside(
     [companionDropdownRef],
-    () => setIsCompanionDropdownOpen(false),
+    () => {
+      setIsCompanionDropdownOpen(false);
+      setSearchQuery("");
+    },
     isCompanionDropdownOpen
   );
 
@@ -63,7 +72,7 @@ export function CompanionSelector({
 
   const companionSuggestions = searchQuery.trim()
     ? filteredAvailableCompanions
-    : availableCompanions.slice(0, 5);
+    : availableCompanions;
 
   const handleToggleCompanion = (companionId: string) => {
     if (selectedIds.includes(companionId)) {
@@ -74,56 +83,72 @@ export function CompanionSelector({
   };
 
   return (
-    <div className={TASK_COMPANION_SELECTOR}>
+    <div className={TASK_COMPANION_SELECTOR} ref={companionDropdownRef}>
       <div className={TASK_COMPANION_LABEL}>
         <IconUsers className="w-4 h-4" />
         Companions
       </div>
 
-      <div className={TASK_COMPANION_INPUT_WRAPPER} ref={companionDropdownRef}>
-        <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-        <input
-          type="text"
-          placeholder="Search to add..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => setIsCompanionDropdownOpen(true)}
-          className={TASK_COMPANION_INPUT}
+      <div
+        onClick={() => setIsCompanionDropdownOpen(!isCompanionDropdownOpen)}
+        className={TASK_COMPANION_TRIGGER}
+      >
+        <span className="text-slate-400 select-none">
+          {selectedCompanions.length > 0
+            ? `${selectedCompanions.length} companion${
+                selectedCompanions.length === 1 ? "" : "s"
+              } linked`
+            : "Add companions"}
+        </span>
+        <IconChevronDown
+          className={`w-4 h-4 text-slate-500 transition-transform ${
+            isCompanionDropdownOpen ? "rotate-180" : ""
+          }`}
         />
+      </div>
 
-        {isCompanionDropdownOpen && (
-          <div className={TASK_COMPANION_DROPDOWN}>
+      {isCompanionDropdownOpen && (
+        <div className={TASK_COMPANION_DROPDOWN}>
+          <div className={TASK_SELECTOR_SEARCH_WRAPPER}>
+            <IconSearch className={TASK_SELECTOR_SEARCH_ICON} />
+            <input
+              type="text"
+              placeholder="Search companions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={TASK_SELECTOR_SEARCH_INPUT}
+              autoFocus
+            />
+          </div>
+          <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
             {companionSuggestions.length > 0 ? (
-              <div className="p-1 space-y-0.5">
-                {companionSuggestions.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      handleToggleCompanion(c.id);
-                      setSearchQuery("");
-                    }}
-                    className={TASK_COMPANION_SUGGESTION}
-                  >
-                    <div
-                      className={TASK_COMPANION_AVATAR}
-                      style={{ backgroundColor: c.color || "#64748b" }}
-                    >
-                      {getInitials(c.name)}
-                    </div>
-                    <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
-                      {c.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              companionSuggestions.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    handleToggleCompanion(c.id);
+                    setSearchQuery("");
+                  }}
+                  className={TASK_COMPANION_SUGGESTION}
+                >
+                  <Avatar
+                    content={getInitials(c.name)}
+                    bgColor={c.color || "#64748b"}
+                    size={20}
+                  />
+                  <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+                    {c.name}
+                  </span>
+                </button>
+              ))
             ) : (
               <div className="p-3 text-xs text-slate-500 text-center italic">
-                No companions available to add
+                No companions found
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className={TASK_COMPANION_SELECTED_LIST}>
         {selectedCompanions.length > 0 ? (
@@ -138,12 +163,12 @@ export function CompanionSelector({
                   title={`Remove ${c.name}`}
                 >
                   <div className="relative w-4 h-4 flex items-center justify-center">
-                    <div
-                      className={TASK_COMPANION_PILL_AVATAR}
-                      style={{ backgroundColor: c.color || "#64748b" }}
-                    >
-                      {getInitials(c.name)}
-                    </div>
+                    <Avatar
+                      content={getInitials(c.name)}
+                      bgColor={c.color || "#64748b"}
+                      size={16}
+                      className="absolute inset-0 transition-opacity group-hover:opacity-0"
+                    />
                     <div className={TASK_COMPANION_PILL_ICON}>
                       <IconX className="w-3.5 h-3.5" />
                     </div>
@@ -164,10 +189,11 @@ export function CompanionSelector({
             )}
           </>
         ) : (
-          <div className="text-xs text-slate-500 italic">No companions linked.</div>
+          <div className="text-xs text-slate-500 italic">
+            No companions linked.
+          </div>
         )}
       </div>
     </div>
   );
 }
-

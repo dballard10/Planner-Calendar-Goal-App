@@ -5,6 +5,7 @@ import {
   IconTarget,
   IconCalendar,
   IconUsers,
+  IconSettings,
 } from "@tabler/icons-react";
 
 interface LeftSidebarProps {
@@ -50,6 +51,8 @@ export function LeftSidebar({
     { id: "goals", label: "Goals", icon: IconTarget },
     { id: "companions", label: "Companions", icon: IconUsers },
   ];
+
+  const settingsTab = { id: "settings", label: "Settings", icon: IconSettings };
 
   return (
     <motion.div
@@ -132,6 +135,32 @@ export function LeftSidebar({
             </div>
           );
         })}
+
+        {/* Bottom-pinned Settings */}
+        <div className="mt-auto">
+          <button
+            onClick={() => onTabChange(settingsTab.id)}
+            className={`flex items-center p-2 rounded-md transition-colors w-full ${
+              activeTab === settingsTab.id
+                ? "bg-slate-800 text-slate-100"
+                : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+            }`}
+            title={!isOpen ? settingsTab.label : undefined}
+          >
+            <div className="flex items-center justify-center min-w-[28px]">
+              <settingsTab.icon className="w-5 h-5" />
+            </div>
+            <motion.span
+              animate={{
+                opacity: isOpen ? 1 : 0,
+                width: isOpen ? "auto" : 0,
+              }}
+              className="ml-3 text-sm font-medium whitespace-nowrap overflow-hidden"
+            >
+              {settingsTab.label}
+            </motion.span>
+          </button>
+        </div>
       </nav>
 
       {/* Footer toggle removed */}

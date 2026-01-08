@@ -3,6 +3,7 @@ import type {
   WeekState,
   Task,
   TaskStatus,
+  TaskLocation,
   Group,
   WeeklyItemType,
   Goal,
@@ -108,7 +109,6 @@ function createMockData(weekStart: string): {
     id: "comp-sarah",
     name: "Sarah",
     relationship: "friend" as const,
-    avatarEmoji: "👩",
     color: "#fb7185",
     createdAt: new Date().toISOString(),
   };
@@ -116,7 +116,6 @@ function createMockData(weekStart: string): {
     id: "comp-mike",
     name: "Mike",
     relationship: "coworker" as const,
-    avatarEmoji: "👨",
     color: "#60a5fa",
     createdAt: new Date().toISOString(),
   };
@@ -401,6 +400,15 @@ export function useWeekState() {
     }));
   };
 
+  const updateTaskLocation = (id: string, location?: TaskLocation) => {
+    setWeekState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((task) =>
+        task.id === id ? { ...task, location } : task
+      ),
+    }));
+  };
+
   const deleteTask = (id: string) => {
     setWeekState((prev) => ({
       ...prev,
@@ -471,14 +479,13 @@ export function useWeekState() {
   const addCompanion = (
     name: string,
     relationship: Companion["relationship"],
-    avatarEmoji?: string,
     description?: string
-  ) => {
+  ): string => {
+    const id = generateId();
     const newComp: Companion = {
-      id: generateId(),
+      id,
       name,
       relationship,
-      avatarEmoji,
       description,
       // Random color generator
       color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`,
@@ -488,6 +495,7 @@ export function useWeekState() {
       ...prev,
       companions: [...prev.companions, newComp],
     }));
+    return id;
   };
 
   const updateCompanion = (
@@ -549,6 +557,7 @@ export function useWeekState() {
       updateTaskTitle,
       updateTaskType,
       updateTaskLinks,
+      updateTaskLocation,
       deleteTask,
       updateGroupTitle,
       deleteGroup,

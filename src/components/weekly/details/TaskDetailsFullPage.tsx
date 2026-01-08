@@ -2,6 +2,7 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import type {
   Task,
   TaskStatus,
+  TaskLocation,
   WeeklyItemType,
   Goal,
   Companion,
@@ -25,6 +26,7 @@ interface TaskDetailsFullPageProps {
   onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
+  onLocationChange?: (location?: TaskLocation) => void;
 }
 
 export default function TaskDetailsFullPage({
@@ -38,6 +40,7 @@ export default function TaskDetailsFullPage({
   onGoalsChange,
   onCompanionsChange,
   onLinksChange,
+  onLocationChange,
 }: TaskDetailsFullPageProps) {
   return (
     <div className={TASK_DETAILS_PAGE_CONTAINER}>
@@ -60,6 +63,7 @@ export default function TaskDetailsFullPage({
             onGoalsChange={onGoalsChange}
             onCompanionsChange={onCompanionsChange}
             onLinksChange={onLinksChange}
+            onLocationChange={onLocationChange}
           />
         </div>
       </div>

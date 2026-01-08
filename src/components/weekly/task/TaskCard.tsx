@@ -6,7 +6,7 @@ import {
   ITEM_TYPE_STYLES,
   INFORMATIONAL_TYPES,
 } from "../../../lib/itemTypeConfig";
-import EmojiCircleStack from "../../ui/EmojiCircleStack";
+import AvatarStack from "../../ui/AvatarStack";
 import {
   TASK_CARD_BODY,
   TASK_CARD_CONTAINER,
@@ -17,10 +17,12 @@ import {
   TASK_DELETE_BUTTON,
   TASK_INDICATOR_GROUP,
   TASK_KIND_BADGE,
-  getTaskCardStyleClass,
+  getTaskCardBaseClasses,
+  getDynamicTaskCardGradientStyle,
 } from "../styles";
 import { InlineMarkdown } from "../shared/InlineMarkdown";
 import { getInitials } from "../utils/name";
+import { useAppSettings } from "../../../context/AppSettingsContext";
 
 interface TaskCardProps {
   task: Task;
@@ -49,6 +51,7 @@ export default function TaskCard({
   onOpenDetailsPage,
   isHighlighted = false,
 }: TaskCardProps) {
+  const settings = useAppSettings();
   const isNewTask = task.title === PLACEHOLDER_TEXT;
   const [isEditing, setIsEditing] = useState(isNewTask);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -142,13 +145,17 @@ export default function TaskCard({
   const typeStyle = ITEM_TYPE_STYLES[type] ?? ITEM_TYPE_STYLES.task;
   const showStatusSelector = !INFORMATIONAL_TYPES.includes(type);
 
+  // Get dynamic color from settings
+  const dynamicColor = settings.itemTypeColors[type];
+  const gradientStyle = getDynamicTaskCardGradientStyle(dynamicColor);
+
   // Determine text color based on type
   const baseTextClass = typeStyle.textColor || "text-slate-200";
   const highlightClass = isHighlighted
     ? "ring-2 ring-white/80 shadow-[0_0_8px_rgba(255,255,255,0.9)]"
     : "";
 
-  const cardStyleClass = getTaskCardStyleClass({
+  const cardStyleClass = getTaskCardBaseClasses({
     itemType: type,
     textClass: baseTextClass,
     isClickable: true,
@@ -172,6 +179,7 @@ export default function TaskCard({
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
       className={`${TASK_CARD_CONTAINER} ${cardStyleClass} ${highlightClass}`}
+      style={gradientStyle}
     >
       <div className={TASK_CARD_BODY}>
         {showStatusSelector && (
@@ -224,39 +232,28 @@ export default function TaskCard({
             (taskGoals.length > 0 || taskCompanions.length > 0) && (
               <div className={TASK_INDICATOR_GROUP}>
                 {taskGoals.length > 0 && (
-                  <EmojiCircleStack
+                  <AvatarStack
                     items={taskGoals.map((goal) => ({
                       id: goal.id,
-                      emoji: goal.emoji,
+                      content: goal.emoji || "🎯",
                       label: goal.name,
-                      style: {
-                        backgroundColor: goal.color ?? "#475569",
-                      },
+                      bgColor: goal.color ?? "#475569",
                     }))}
                     maxVisible={3}
-                    size={20}
-                    circleClassName="border border-slate-800 text-[11px] text-white shadow-sm"
-                    overflowClassName="border border-slate-800 bg-slate-900/80 text-[10px] text-slate-300"
+                    size={22}
                   />
                 )}
                 {taskCompanions.length > 0 && (
-                  <div className="flex items-center -space-x-1.5">
-                    {taskCompanions.slice(0, 3).map((c) => (
-                      <div
-                        key={c.id}
-                        className="w-5 h-5 rounded-full border border-slate-800 flex items-center justify-center text-[9px] font-medium text-white shadow-sm"
-                        style={{ backgroundColor: c.color || "#64748b" }}
-                        title={c.name}
-                      >
-                        {getInitials(c.name)}
-                      </div>
-                    ))}
-                    {taskCompanions.length > 3 && (
-                      <div className="w-5 h-5 rounded-full bg-slate-700 border border-slate-800 flex items-center justify-center text-[8px] text-slate-400 font-medium">
-                        +{taskCompanions.length - 3}
-                      </div>
-                    )}
-                  </div>
+                  <AvatarStack
+                    items={taskCompanions.map((c) => ({
+                      id: c.id,
+                      content: getInitials(c.name),
+                      label: c.name,
+                      bgColor: c.color || "#64748b",
+                    }))}
+                    maxVisible={3}
+                    size={22}
+                  />
                 )}
               </div>
             )}

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { IconTarget, IconChevronDown, IconCheck, IconX } from "@tabler/icons-react";
+import { IconTarget, IconChevronDown, IconCheck, IconX, IconSearch } from "@tabler/icons-react";
 import type { Goal } from "../../../types/weekly";
 import {
   TASK_GOAL_BUTTON,
@@ -13,6 +13,9 @@ import {
   TASK_GOAL_SELECTOR,
   TASK_GOAL_SELECTOR_LABEL,
   TASK_GOAL_TRIGGER,
+  TASK_SELECTOR_SEARCH_ICON,
+  TASK_SELECTOR_SEARCH_INPUT,
+  TASK_SELECTOR_SEARCH_WRAPPER,
 } from "../styles";
 import { useClickOutside } from "../shared/useClickOutside";
 
@@ -28,9 +31,13 @@ export function GoalMultiSelect({
   onChange,
 }: GoalMultiSelectProps) {
   const [isGoalDropdownOpen, setIsGoalDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const goalDropdownRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside([goalDropdownRef], () => setIsGoalDropdownOpen(false), isGoalDropdownOpen);
+  useClickOutside([goalDropdownRef], () => {
+    setIsGoalDropdownOpen(false);
+    setSearchQuery("");
+  }, isGoalDropdownOpen);
 
   const selectedGoals = useMemo(
     () =>
@@ -39,6 +46,12 @@ export function GoalMultiSelect({
         .filter((g): g is Goal => !!g),
     [goals, selectedGoalIds]
   );
+
+  const filteredGoals = useMemo(() => {
+    if (!searchQuery.trim()) return goals;
+    const lowerQuery = searchQuery.toLowerCase();
+    return goals.filter((g) => g.name.toLowerCase().includes(lowerQuery));
+  }, [goals, searchQuery]);
 
   const handleToggleGoal = (goalId: string) => {
     const isSelected = selectedGoalIds.includes(goalId);
@@ -73,9 +86,20 @@ export function GoalMultiSelect({
 
       {isGoalDropdownOpen && (
         <div className={TASK_GOAL_DROPDOWN}>
-          <div className="p-1 space-y-0.5">
-            {goals.length > 0 ? (
-              goals.map((g) => {
+          <div className={TASK_SELECTOR_SEARCH_WRAPPER}>
+            <IconSearch className={TASK_SELECTOR_SEARCH_ICON} />
+            <input
+              type="text"
+              placeholder="Search goals..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={TASK_SELECTOR_SEARCH_INPUT}
+              autoFocus
+            />
+          </div>
+          <div className="p-1 space-y-0.5 max-h-48 overflow-y-auto">
+            {filteredGoals.length > 0 ? (
+              filteredGoals.map((g) => {
                 const isSelected = selectedGoalIds.includes(g.id);
                 return (
                   <button
@@ -92,7 +116,7 @@ export function GoalMultiSelect({
                 );
               })
             ) : (
-              <div className="p-3 text-xs text-slate-500 text-center italic">No goals available</div>
+              <div className="p-3 text-xs text-slate-500 text-center italic">No goals found</div>
             )}
           </div>
         </div>
@@ -128,4 +152,5 @@ export function GoalMultiSelect({
     </div>
   );
 }
+
 

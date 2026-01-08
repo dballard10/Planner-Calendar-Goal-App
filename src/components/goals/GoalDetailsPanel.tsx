@@ -4,6 +4,7 @@ import GoalColorSelect from "./GoalColorSelect";
 import type { GoalAccentColor } from "./goalStyles";
 import { DEFAULT_GOAL_COLOR, normalizeGoalColor } from "./goalStyles";
 import { ITEM_TYPE_STYLES } from "../../lib/itemTypeConfig";
+import SegmentedDateInput from "../ui/SegmentedDateInput";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -155,10 +156,9 @@ export default function GoalDetailsPanel({
             <label className="text-xs uppercase tracking-wide text-slate-400">
               Due Date
             </label>
-            <input
-              type="date"
+            <SegmentedDateInput
               value={dueDate}
-              onChange={(event) => handleDueDateChange(event.target.value)}
+              onChange={(value) => handleDueDateChange(value)}
               className="mt-1 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
             />
           </div>

@@ -14,10 +14,8 @@ import {
   isToday,
 } from "date-fns";
 import type { CalendarEvent } from "../../types/calendar";
-import {
-  ITEM_TYPE_PRIORITIES,
-  ITEM_TYPE_STYLES,
-} from "../../lib/itemTypeConfig";
+import { ITEM_TYPE_PRIORITIES } from "../../lib/itemTypeConfig";
+import { useAppSettings, type AppSettings } from "../../context/AppSettingsContext";
 
 interface YearCalendarGridProps {
   selectedDate: Date;
@@ -30,6 +28,7 @@ export function YearCalendarGrid({
   onDateSelect,
   events,
 }: YearCalendarGridProps) {
+  const settings = useAppSettings();
   const yearStart = startOfYear(selectedDate);
   const yearEnd = endOfYear(selectedDate);
   const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
@@ -43,6 +42,7 @@ export function YearCalendarGrid({
           selectedDate={selectedDate}
           onDateSelect={onDateSelect}
           events={events}
+          settings={settings}
         />
       ))}
     </div>
@@ -54,11 +54,13 @@ function MiniMonth({
   selectedDate,
   onDateSelect,
   events,
+  settings,
 }: {
   month: Date;
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   events: CalendarEvent[];
+  settings: AppSettings;
 }) {
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
@@ -102,8 +104,8 @@ function MiniMonth({
             dayEvents.some((event) => event.type === type)
           );
           const dotColor = primaryType
-            ? ITEM_TYPE_STYLES[primaryType].colorHex
-            : ITEM_TYPE_STYLES.task.colorHex;
+            ? settings.itemTypeColors[primaryType]
+            : settings.itemTypeColors.task;
 
           return (
             <button

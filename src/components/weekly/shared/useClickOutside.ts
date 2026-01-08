@@ -1,9 +1,9 @@
 import { useEffect, type RefObject } from "react";
 
-type PossibleRef<T> = RefObject<T> | null | undefined;
+type PossibleRef<T> = RefObject<T | null> | null | undefined;
 
-export function useClickOutside(
-  refs: PossibleRef<HTMLElement>[],
+export function useClickOutside<T extends HTMLElement = HTMLElement>(
+  refs: PossibleRef<T>[],
   onOutsideClick: () => void,
   active = true
 ) {

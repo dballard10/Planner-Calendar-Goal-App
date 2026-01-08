@@ -1,4 +1,4 @@
-import type { Task, TaskStatus, WeekState, Group, WeeklyItemType } from "../../types/weekly";
+import type { Task, TaskStatus, TaskLocation, WeekState, Group, WeeklyItemType } from "../../types/weekly";
 
 export type MarkdownTaskStatusToken = "[ ]" | "[x]" | "[>]" | "[-]" | "[?]";
 
@@ -81,11 +81,81 @@ export const serializeMarkdownTask = (task: MarkdownTask): string => {
 };
 
 export const taskToMarkdownLine = (task: Task): string => {
-  return serializeMarkdownTask({
+  const mainLine = serializeMarkdownTask({
     status: task.status,
     title: task.title,
   });
+
+  // If no location, just return the main line
+  if (!task.location) {
+    return mainLine;
+  }
+
+  // Add location metadata as indented bullet lines
+  const lines = [mainLine];
+  lines.push(`  - location: ${task.location.label}`);
+  if (task.location.mapUrl) {
+    lines.push(`  - map: ${task.location.mapUrl}`);
+  }
+
+  return lines.join("\n");
 };
+
+// Parse location metadata from indented lines following a task
+const LOCATION_LINE_REGEX = /^\s+-\s+location:\s+(.+)$/;
+const MAP_LINE_REGEX = /^\s+-\s+map:\s+(.+)$/;
+
+interface ParsedLocationMeta {
+  label?: string;
+  mapUrl?: string;
+}
+
+function parseLocationMetaLines(
+  lines: string[],
+  startIndex: number
+): { meta: ParsedLocationMeta; linesConsumed: number } {
+  const meta: ParsedLocationMeta = {};
+  let linesConsumed = 0;
+
+  for (let i = startIndex; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Check for location line
+    const locationMatch = line.match(LOCATION_LINE_REGEX);
+    if (locationMatch) {
+      meta.label = locationMatch[1].trim();
+      linesConsumed++;
+      continue;
+    }
+
+    // Check for map line
+    const mapMatch = line.match(MAP_LINE_REGEX);
+    if (mapMatch) {
+      meta.mapUrl = mapMatch[1].trim();
+      linesConsumed++;
+      continue;
+    }
+
+    // If line doesn't match location metadata patterns, stop
+    // (could be another task, header, etc.)
+    break;
+  }
+
+  return { meta, linesConsumed };
+}
+
+// Build a TaskLocation from parsed metadata
+function buildTaskLocation(meta: ParsedLocationMeta): TaskLocation | undefined {
+  if (!meta.label) {
+    return undefined;
+  }
+
+  return {
+    label: meta.label,
+    mapUrl: meta.mapUrl || "",
+    provider: "nominatim",
+  };
+}
 
 const DAY_NAMES = [
   "Sunday",
@@ -148,7 +218,9 @@ export const weekStateToMarkdown = (week: WeekState): string => {
     // Render root tasks first (or we could mix them)
     if (rootTasks.length > 0) {
       for (const task of rootTasks) {
-        lines.push(taskToMarkdownLine(task));
+        // taskToMarkdownLine may return multiple lines (task + metadata)
+        const taskLines = taskToMarkdownLine(task);
+        lines.push(taskLines);
       }
     }
 
@@ -162,8 +234,13 @@ export const weekStateToMarkdown = (week: WeekState): string => {
         .sort((a, b) => a.position - b.position);
 
       for (const task of groupTasks) {
-        // Indent tasks under group
-        lines.push(`  ${taskToMarkdownLine(task)}`);
+        // Indent all lines (task + metadata) under group
+        const taskLines = taskToMarkdownLine(task);
+        const indentedLines = taskLines
+          .split("\n")
+          .map((l) => `  ${l}`)
+          .join("\n");
+        lines.push(indentedLines);
       }
     }
 
@@ -197,11 +274,14 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
     return `id-${Math.random().toString(36).slice(2)}`;
   };
 
-  for (const line of lines) {
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
     const trimmed = line.trim();
 
     if (!weekStart && trimmed.startsWith(weekHeaderPrefix)) {
       weekStart = trimmed.slice(weekHeaderPrefix.length).trim();
+      i++;
       continue;
     }
 
@@ -215,13 +295,17 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
       );
       currentDayIndex = dayIndex >= 0 ? dayIndex : null;
       currentGroupId = null; // Reset group context on new day
+      i++;
       continue;
     }
 
     // Group Header
     // Simple heuristic: "#### Group: My Title"
     if (trimmed.startsWith("#### Group:")) {
-      if (currentDayIndex == null) continue;
+      if (currentDayIndex == null) {
+        i++;
+        continue;
+      }
 
       const groupTitle = trimmed.replace("#### Group:", "").trim();
       const newGroup: Group = {
@@ -236,30 +320,27 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
       };
       groups.push(newGroup);
       currentGroupId = newGroup.id;
+      i++;
       continue;
     }
 
     // Task Line
     if (TASK_LINE_REGEX.test(line)) {
-      if (currentDayIndex == null) continue;
+      if (currentDayIndex == null) {
+        i++;
+        continue;
+      }
       const parsed = parseMarkdownTaskLine(line);
-      if (!parsed) continue;
-
-      // Determine indentation to decide if it belongs to current group
-      // But for this simple parser, we'll assume if currentGroupId is set, it belongs there
-      // until we hit a new day or new group.
-      // Ideally we check indentation levels, but let's keep it simple as requested.
-      // If line starts with spaces and we have a group, put it in the group.
+      if (!parsed) {
+        i++;
+        continue;
+      }
 
       // Check indentation from regex match
       const match = line.match(TASK_LINE_REGEX);
       const indentation = match ? match[1] : "";
 
       // If no indentation, it might mean we stepped out of the group
-      // But let's be loose: if there is an active group, assign to it.
-      // If user wants to "exit" group in markdown, they usually start a new header or unindented list.
-      // For now: strict indentation check?
-      // Let's say 2+ spaces = group task if group active.
       let targetGroupId = currentGroupId;
       if (currentGroupId && indentation.length < 2) {
         // Indentation broken -> likely exited group
@@ -271,6 +352,10 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
         ? tasks.filter((t) => t.groupId === targetGroupId)
         : tasks.filter((t) => t.dayIndex === currentDayIndex && !t.groupId);
 
+      // Look ahead for location metadata on subsequent lines
+      const { meta, linesConsumed } = parseLocationMetaLines(lines, i + 1);
+      const location = buildTaskLocation(meta);
+
       tasks.push({
         id: getOrCreateId(),
         type: parsed.type,
@@ -280,8 +365,16 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
         position: existingInContext.length,
         createdAt: new Date().toISOString(),
         groupId: targetGroupId || undefined,
+        location,
       });
+
+      // Skip the metadata lines we consumed
+      i += 1 + linesConsumed;
+      continue;
     }
+
+    // Default: move to next line
+    i++;
   }
 
   if (!weekStart) {

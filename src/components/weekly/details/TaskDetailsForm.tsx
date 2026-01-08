@@ -1,11 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   IconClock,
   IconMapPin,
   IconRepeat,
   IconAlignLeft,
+  IconExternalLink,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { LinksEditor } from "./LinksEditor";
+import SegmentedDateInput from "../../ui/SegmentedDateInput";
+import type { TaskLocation } from "../../../types/weekly";
+import {
+  searchPlaces,
+  suggestionToTaskLocation,
+  requestGeolocation,
+  type PlaceSuggestion,
+} from "../../../lib/places/nominatim";
+import { useAppSettings } from "../../../context/AppSettingsContext";
 
 interface TaskDetailsFormValues {
   startDate?: string;
@@ -13,7 +24,7 @@ interface TaskDetailsFormValues {
   startTime?: string;
   endTime?: string;
   description?: string;
-  location?: string;
+  location?: TaskLocation;
   people?: string;
   goals?: string;
   linksMarkdown?: string;
@@ -22,12 +33,16 @@ interface TaskDetailsFormValues {
 interface TaskDetailsFormProps {
   initialValues?: TaskDetailsFormValues;
   onChange?: (values: TaskDetailsFormValues) => void;
+  onLocationChange?: (location?: TaskLocation) => void;
 }
 
 export default function TaskDetailsForm({
   initialValues,
   onChange,
+  onLocationChange,
 }: TaskDetailsFormProps) {
+  const settings = useAppSettings();
+
   // Local state for form fields
   const [startDate, setStartDate] = useState(initialValues?.startDate || "");
   const [endDate, setEndDate] = useState(initialValues?.endDate || "");
@@ -36,12 +51,32 @@ export default function TaskDetailsForm({
   const [description, setDescription] = useState(
     initialValues?.description || ""
   );
-  const [location, setLocation] = useState(initialValues?.location || "");
   const [people, setPeople] = useState(initialValues?.people || "");
   const [goals, setGoals] = useState(initialValues?.goals || "");
   const [linksMarkdown, setLinksMarkdown] = useState(
     initialValues?.linksMarkdown || ""
   );
+
+  // Location autocomplete state
+  const [locationData, setLocationData] = useState<TaskLocation | undefined>(
+    initialValues?.location
+  );
+  const [locationQuery, setLocationQuery] = useState(
+    initialValues?.location?.label || ""
+  );
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [userPosition, setUserPosition] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLUListElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setStartDate(initialValues?.startDate || "");
@@ -49,10 +84,11 @@ export default function TaskDetailsForm({
     setStartTime(initialValues?.startTime || "");
     setEndTime(initialValues?.endTime || "");
     setDescription(initialValues?.description || "");
-    setLocation(initialValues?.location || "");
     setPeople(initialValues?.people || "");
     setGoals(initialValues?.goals || "");
     setLinksMarkdown(initialValues?.linksMarkdown || "");
+    setLocationData(initialValues?.location);
+    setLocationQuery(initialValues?.location?.label || "");
   }, [
     initialValues?.description,
     initialValues?.endDate,
@@ -66,7 +102,7 @@ export default function TaskDetailsForm({
   ]);
 
   // Helper to handle changes and notify parent if needed
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string) => {
     // Update local state based on field
     switch (field) {
       case "startDate":
@@ -83,9 +119,6 @@ export default function TaskDetailsForm({
         break;
       case "description":
         setDescription(value);
-        break;
-      case "location":
-        setLocation(value);
         break;
       case "people":
         setPeople(value);
@@ -106,13 +139,158 @@ export default function TaskDetailsForm({
         startTime: field === "startTime" ? value : startTime,
         endTime: field === "endTime" ? value : endTime,
         description: field === "description" ? value : description,
-        location: field === "location" ? value : location,
+        location: locationData,
         people: field === "people" ? value : people,
         goals: field === "goals" ? value : goals,
         linksMarkdown: field === "linksMarkdown" ? value : linksMarkdown,
       });
     }
   };
+
+  // Location autocomplete handlers
+  const performSearch = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setSuggestions([]);
+        setIsDropdownOpen(false);
+        return;
+      }
+
+      // Cancel any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setIsSearching(true);
+
+      try {
+        const results = await searchPlaces(query, {
+          signal: controller.signal,
+          lat: userPosition?.lat,
+          lng: userPosition?.lng,
+          limit: 5,
+        });
+
+        setSuggestions(results);
+        setHighlightIndex(-1);
+        setIsDropdownOpen(results.length > 0);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Location search failed:", err);
+        }
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [userPosition]
+  );
+
+  const handleLocationInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    setLocationQuery(value);
+
+    // Clear selected location when user starts typing again
+    if (locationData) {
+      setLocationData(undefined);
+      onLocationChange?.(undefined);
+    }
+
+    // Debounce the search
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      performSearch(value);
+    }, 300);
+  };
+
+  const handleLocationFocus = () => {
+    // Request geolocation on first focus (only if location is enabled in settings)
+    if (!userPosition && settings.locationEnabled) {
+      requestGeolocation().then((pos) => {
+        if (pos) {
+          setUserPosition(pos);
+        }
+      });
+    }
+
+    // Show dropdown if we have suggestions
+    if (suggestions.length > 0) {
+      setIsDropdownOpen(true);
+    }
+  };
+
+  const handleLocationBlur = (e: React.FocusEvent) => {
+    // Delay closing to allow click on suggestion
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (dropdownRef.current?.contains(relatedTarget)) {
+      return;
+    }
+
+    setTimeout(() => {
+      setIsDropdownOpen(false);
+    }, 150);
+  };
+
+  const selectSuggestion = (suggestion: PlaceSuggestion) => {
+    const taskLocation = suggestionToTaskLocation(suggestion);
+    setLocationData(taskLocation);
+    setLocationQuery(taskLocation.label);
+    setSuggestions([]);
+    setIsDropdownOpen(false);
+    setHighlightIndex(-1);
+    onLocationChange?.(taskLocation);
+  };
+
+  const handleLocationKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isDropdownOpen || suggestions.length === 0) {
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightIndex((prev) =>
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlightIndex >= 0 && highlightIndex < suggestions.length) {
+          selectSuggestion(suggestions[highlightIndex]);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setIsDropdownOpen(false);
+        setHighlightIndex(-1);
+        break;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,19 +304,17 @@ export default function TaskDetailsForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-slate-400">Start Date</label>
-            <input
-              type="date"
+            <SegmentedDateInput
               value={startDate}
-              onChange={(e) => handleChange("startDate", e.target.value)}
+              onChange={(value) => handleChange("startDate", value)}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-slate-400">End Date</label>
-            <input
-              type="date"
+            <SegmentedDateInput
               value={endDate}
-              onChange={(e) => handleChange("endDate", e.target.value)}
+              onChange={(value) => handleChange("endDate", value)}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
             />
           </div>
@@ -198,18 +374,84 @@ export default function TaskDetailsForm({
           />
         </div>
 
-        {/* Location */}
+        {/* Location Autocomplete */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs text-slate-400 flex items-center gap-1">
             <IconMapPin size={12} /> Location
           </label>
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => handleChange("location", e.target.value)}
-            placeholder="Add location"
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors"
-          />
+          <div className="relative">
+            <input
+              ref={locationInputRef}
+              type="text"
+              value={locationQuery}
+              onChange={handleLocationInputChange}
+              onFocus={handleLocationFocus}
+              onBlur={handleLocationBlur}
+              onKeyDown={handleLocationKeyDown}
+              placeholder="Search for a place..."
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={isDropdownOpen}
+              aria-controls="location-listbox"
+              aria-activedescendant={
+                highlightIndex >= 0
+                  ? `location-option-${highlightIndex}`
+                  : undefined
+              }
+              className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors pr-8"
+            />
+            {isSearching && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <IconLoader2 size={16} className="text-slate-400 animate-spin" />
+              </div>
+            )}
+
+            {/* Suggestions Dropdown */}
+            {isDropdownOpen && suggestions.length > 0 && (
+              <ul
+                ref={dropdownRef}
+                id="location-listbox"
+                role="listbox"
+                className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto"
+              >
+                {suggestions.map((suggestion, index) => (
+                  <li
+                    key={suggestion.id}
+                    id={`location-option-${index}`}
+                    role="option"
+                    aria-selected={index === highlightIndex}
+                    onClick={() => selectSuggestion(suggestion)}
+                    onMouseEnter={() => setHighlightIndex(index)}
+                    className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
+                      index === highlightIndex
+                        ? "bg-purple-500/20 text-slate-100"
+                        : "text-slate-300 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    <div className="font-medium truncate">{suggestion.label}</div>
+                    {suggestion.secondaryLabel && (
+                      <div className="text-xs text-slate-500 truncate">
+                        {suggestion.secondaryLabel}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Open Map Link */}
+          {locationData?.mapUrl && (
+            <a
+              href={locationData.mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors w-fit"
+            >
+              <IconExternalLink size={12} />
+              Open in Maps
+            </a>
+          )}
         </div>
         {/* Links Section */}
         <LinksEditor

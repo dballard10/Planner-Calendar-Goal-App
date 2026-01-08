@@ -3,6 +3,7 @@ import { IconFolders } from "@tabler/icons-react";
 import type {
   WeekState,
   TaskStatus,
+  TaskLocation,
   WeeklyItemType,
 } from "../../../types/weekly";
 import WeekHeader from "../WeekHeader";
@@ -29,6 +30,7 @@ interface WeeklyViewProps {
     updateTaskTitle: (id: string, title: string) => void;
     updateTaskType: (id: string, type: WeeklyItemType) => void;
     updateTaskLinks?: (id: string, linksMarkdown?: string) => void;
+    updateTaskLocation?: (id: string, location?: TaskLocation) => void;
     deleteTask: (id: string) => void;
     updateGroupTitle: (id: string, title: string) => void;
     deleteGroup: (id: string) => void;
@@ -163,6 +165,8 @@ export default function WeeklyView({
         actions.setTaskCompanions?.(selectedTask.id, cids),
       onLinksChange: (links?: string) =>
         actions.updateTaskLinks?.(selectedTask.id, links),
+      onLocationChange: (loc?: TaskLocation) =>
+        actions.updateTaskLocation?.(selectedTask.id, loc),
     };
 
     return (
@@ -193,6 +197,8 @@ export default function WeeklyView({
         actions.setTaskCompanions?.(selectedTask.id, cids),
       onLinksChange: (links?: string) =>
         actions.updateTaskLinks?.(selectedTask.id, links),
+      onLocationChange: (loc?: TaskLocation) =>
+        actions.updateTaskLocation?.(selectedTask.id, loc),
     };
 
   return (

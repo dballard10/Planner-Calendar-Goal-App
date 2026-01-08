@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import type {
   Task,
   TaskStatus,
+  TaskLocation,
   WeeklyItemType,
   Goal,
   Companion,
@@ -29,6 +30,7 @@ interface TaskDetailsModalProps {
   onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
+  onLocationChange?: (location?: TaskLocation) => void;
 }
 
 export default function TaskDetailsModal({
@@ -43,6 +45,7 @@ export default function TaskDetailsModal({
   onGoalsChange,
   onCompanionsChange,
   onLinksChange,
+  onLocationChange,
 }: TaskDetailsModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -73,6 +76,7 @@ export default function TaskDetailsModal({
             onGoalsChange={onGoalsChange}
             onCompanionsChange={onCompanionsChange}
             onLinksChange={onLinksChange}
+            onLocationChange={onLocationChange}
           />
         </div>
       </div>

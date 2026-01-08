@@ -7,3 +7,4 @@ export function getInitials(name: string) {
     .slice(0, 2);
 }
 
+

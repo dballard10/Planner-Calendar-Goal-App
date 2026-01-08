@@ -42,3 +42,30 @@ export function getTaskCardStyleClass(options: TaskCardStyleOptions = {}) {
   return `${backgroundClass} ${textClass} border-slate-700 hover:border-slate-500 shadow-sm ${interactionClass}`;
 }
 
+// Helper to convert hex to rgba for gradients
+function hexToRgba(hex: string, alpha: number): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return hex;
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Generate dynamic gradient style for task cards based on custom color
+export function getDynamicTaskCardGradientStyle(colorHex: string): React.CSSProperties {
+  return {
+    background: `linear-gradient(to right, ${hexToRgba(colorHex, 0.7)}, rgb(2, 6, 23))`,
+  };
+}
+
+// Get classes without the background (for use with dynamic inline styles)
+export function getTaskCardBaseClasses(options: TaskCardStyleOptions = {}) {
+  const textClass = options.textClass || "text-slate-200";
+  const interactionClass = options.isClickable
+    ? "cursor-pointer"
+    : "cursor-default";
+  return `${textClass} border-slate-700 hover:border-slate-500 shadow-sm ${interactionClass}`;
+}
+
+

@@ -17,7 +17,10 @@ export function LinksEditor({ linksMarkdown, onChange }: LinksEditorProps) {
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newLinkLabel, setNewLinkLabel] = useState("");
 
-  const linkLines = useMemo(() => cleanLinkLines(linksMarkdown), [linksMarkdown]);
+  const linkLines = useMemo(
+    () => cleanLinkLines(linksMarkdown),
+    [linksMarkdown]
+  );
   const linkEntries: LinkEntry[] = useMemo(
     () =>
       linkLines
@@ -55,7 +58,7 @@ export function LinksEditor({ linksMarkdown, onChange }: LinksEditorProps) {
           type="text"
           value={newLinkLabel}
           onChange={(e) => setNewLinkLabel(e.target.value)}
-          placeholder="Label (optional)"
+          placeholder="Label"
           className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-colors"
         />
         <div className="flex gap-2">
@@ -107,4 +110,3 @@ export function LinksEditor({ linksMarkdown, onChange }: LinksEditorProps) {
     </div>
   );
 }
-

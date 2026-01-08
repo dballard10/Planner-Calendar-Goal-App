@@ -12,3 +12,4 @@ export function getGroupsForDay(groups: Group[], dayIndex: number) {
     .sort((a, b) => a.position - b.position);
 }
 
+

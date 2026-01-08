@@ -3,6 +3,7 @@ import WeeklyView from "./components/weekly/WeeklyView/WeeklyView";
 import CalendarView from "./components/calendar/CalendarView";
 import GoalsPage from "./components/goals/GoalsPage";
 import CompanionsPage from "./components/goals/CompanionsPage";
+import SettingsPage from "./components/settings/SettingsPage";
 import { AppShellLayout } from "./components/layout/AppShellLayout";
 import { useWeekState, getMostRecentSunday, formatDateISO } from "./hooks/useWeekState";
 import { convertWeekToCalendarEvents } from "./lib/calendar/eventAdapters";
@@ -62,6 +63,9 @@ function App() {
       )}
       {activeTab === "companions" && (
         <CompanionsPage weekState={weekState} actions={actions} />
+      )}
+      {activeTab === "settings" && (
+        <SettingsPage weekState={weekState} actions={actions} />
       )}
     </AppShellLayout>
   );
