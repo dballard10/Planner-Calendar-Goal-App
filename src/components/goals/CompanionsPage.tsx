@@ -11,14 +11,13 @@ import {
 import type { WeekState, Companion, Task } from "../../types/weekly";
 import PageHeader from "../layout/PageHeader";
 import { RightSidePanel } from "../layout/RightSidePanel";
-import { getInitials } from "../weekly/utils/name";
 import { useClickOutside } from "../weekly/shared/useClickOutside";
+import CompanionAvatar from "../ui/CompanionAvatar";
 import {
   TASK_DETAILS_TITLE_INPUT,
   TASK_DETAILS_TITLE_DISPLAY,
   TASK_SELECTOR_DROPDOWN,
 } from "../weekly/styles";
-import Avatar from "../ui/Avatar";
 
 type PanelMode = "details" | "add";
 
@@ -227,11 +226,10 @@ export default function CompanionsPage({
                 >
                   {/* Header with Avatar */}
                   <div className="flex items-start gap-3 mb-3">
-                    <Avatar
-                      content={getInitials(companion.name)}
-                      label={companion.name}
-                      bgColor={companion.color || "#64748b"}
-                      size={56}
+                    <CompanionAvatar
+                      name={companion.name}
+                      color={companion.color}
+                      size="lg"
                       className="flex-shrink-0"
                     />
                     <div className="min-w-0 flex-1">
@@ -396,11 +394,10 @@ function CompanionDetails({
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-start gap-4 pb-4 border-b border-slate-700">
-            <Avatar
-              content={getInitials(companion.name)}
-              label={companion.name}
-              bgColor={companion.color || "#64748b"}
-              size={64}
+            <CompanionAvatar
+              name={companion.name}
+              color={companion.color}
+              size="lg"
             />
             <div className="flex-1 min-w-0">
               {isEditingName ? (

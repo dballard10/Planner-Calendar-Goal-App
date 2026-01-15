@@ -4,15 +4,15 @@ overview: Make the small companion avatar shown on TaskCards match the Companion
 todos:
   - id: add-companion-avatar-component
     content: Add shared `CompanionAvatar` component (initials + color + size variants) in `src/components/ui/CompanionAvatar.tsx`.
-    status: in_progress
+    status: completed
   - id: use-avatar-in-taskcard
     content: Update `src/components/weekly/task/TaskCard.tsx` to render companions using `CompanionAvatar size="sm"` so it matches the Companions page styling.
-    status: pending
+    status: completed
     dependencies:
       - add-companion-avatar-component
   - id: use-avatar-in-companions-page
     content: Update `src/components/goals/CompanionsPage.tsx` to render companion avatars using `CompanionAvatar size="lg"` to keep styling consistent.
-    status: pending
+    status: completed
     dependencies:
       - add-companion-avatar-component
 ---

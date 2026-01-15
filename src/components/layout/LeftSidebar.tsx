@@ -6,6 +6,7 @@ import {
   IconCalendar,
   IconUsers,
   IconSettings,
+  IconNotes,
 } from "@tabler/icons-react";
 
 interface LeftSidebarProps {
@@ -46,6 +47,7 @@ export function LeftSidebar({
   onTabChange,
 }: LeftSidebarProps) {
   const tabs = [
+    { id: "notes", label: "Notes", icon: IconNotes },
     { id: "weekly", label: "Weekly", icon: IconCalendarWeek },
     { id: "calendar", label: "Calendar", icon: IconCalendar },
     { id: "goals", label: "Goals", icon: IconTarget },

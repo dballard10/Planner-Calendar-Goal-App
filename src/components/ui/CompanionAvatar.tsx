@@ -1,6 +1,4 @@
-import React from "react";
 import { getInitials } from "../weekly/utils/name";
-import Avatar from "./Avatar";
 
 interface CompanionAvatarProps {
   name: string;
@@ -9,25 +7,24 @@ interface CompanionAvatarProps {
   className?: string;
 }
 
-/**
- * Specialized Avatar for Companions that ensures consistent styling
- * across TaskCards and the CompanionsPage.
- */
+const sizeStyles = {
+  sm: "w-5 h-5 text-[9px] font-bold shadow-lg",
+  lg: "w-14 h-14 text-xl font-bold shadow-lg",
+};
+
 export default function CompanionAvatar({
   name,
-  color,
+  color = "#64748b",
   size,
   className = "",
 }: CompanionAvatarProps) {
-  const pixelSize = size === "sm" ? 20 : 56;
-
   return (
-    <Avatar
-      content={getInitials(name)}
-      label={name}
-      bgColor={color || "#64748b"}
-      size={pixelSize}
-      className={className}
-    />
+    <div
+      className={`rounded-full flex items-center justify-center text-white ${sizeStyles[size]} ${className}`}
+      style={{ backgroundColor: color }}
+      title={name}
+    >
+      {getInitials(name)}
+    </div>
   );
 }

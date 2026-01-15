@@ -107,7 +107,7 @@ function createMockData(weekStart: string): {
   // Create Mock Companions
   const compSarah = {
     id: "comp-sarah",
-    name: "Sarah",
+    name: "Sarah Kelly",
     relationship: "friend" as const,
     color: "#fb7185",
     createdAt: new Date().toISOString(),
@@ -305,9 +305,30 @@ export function useWeekState() {
   const weekStartDate = getMostRecentSunday();
   const weekStartISO = formatDateISO(weekStartDate);
 
-  const [weekState, setWeekState] = useState<WeekState>(() =>
-    loadWeekStateForStart(weekStartISO)
-  );
+  // Initialize once with full data
+  const initialState = loadWeekStateForStart(weekStartISO);
+
+  // Global profiles (persist across week changes)
+  const [companions, setCompanions] = useState<Companion[]>(initialState.companions);
+  const [goals, setGoals] = useState<Goal[]>(initialState.goals);
+
+  // Week-specific data
+  const [weekSpecificState, setWeekSpecificState] = useState<{
+    weekStart: string;
+    tasks: Task[];
+    groups: Group[];
+  }>({
+    weekStart: initialState.weekStart,
+    tasks: initialState.tasks,
+    groups: initialState.groups,
+  });
+
+  // Combine for backwards compatibility
+  const weekState: WeekState = {
+    ...weekSpecificState,
+    companions,
+    goals,
+  };
 
   // Helper to create a task ID (UUID-like)
   const generateId = () => {
@@ -339,7 +360,7 @@ export function useWeekState() {
       groupId: groupId || undefined,
     };
 
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: [...prev.tasks, newTask],
     }));
@@ -358,14 +379,14 @@ export function useWeekState() {
       createdAt: new Date().toISOString(),
     };
 
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       groups: [...prev.groups, newGroup],
     }));
   };
 
   const updateTaskStatus = (id: string, status: TaskStatus) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
         task.id === id ? { ...task, status } : task
@@ -374,7 +395,7 @@ export function useWeekState() {
   };
 
   const updateTaskTitle = (id: string, title: string) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
         task.id === id ? { ...task, title } : task
@@ -383,7 +404,7 @@ export function useWeekState() {
   };
 
   const updateTaskType = (id: string, type: WeeklyItemType) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
         task.id === id ? { ...task, type } : task
@@ -392,7 +413,7 @@ export function useWeekState() {
   };
 
   const updateTaskLinks = (id: string, linksMarkdown?: string) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
         task.id === id ? { ...task, linksMarkdown } : task
@@ -401,7 +422,7 @@ export function useWeekState() {
   };
 
   const updateTaskLocation = (id: string, location?: TaskLocation) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
         task.id === id ? { ...task, location } : task
@@ -410,14 +431,14 @@ export function useWeekState() {
   };
 
   const deleteTask = (id: string) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.filter((task) => task.id !== id),
     }));
   };
 
   const updateGroupTitle = (id: string, title: string) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       groups: prev.groups.map((group) =>
         group.id === id ? { ...group, title } : group
@@ -426,7 +447,7 @@ export function useWeekState() {
   };
 
   const deleteGroup = (id: string) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       groups: prev.groups.filter((group) => group.id !== id),
       tasks: prev.tasks.filter((task) => task.groupId !== id),
@@ -443,27 +464,21 @@ export function useWeekState() {
       description: "",
       createdAt: new Date().toISOString(),
     };
-    setWeekState((prev) => ({
-      ...prev,
-      goals: [...prev.goals, newGoal],
-    }));
+    setGoals((prev) => [...prev, newGoal]);
   };
 
   const updateGoal = (
     id: string,
     updates: Partial<Omit<Goal, "id" | "createdAt">>
   ) => {
-    setWeekState((prev) => ({
-      ...prev,
-      goals: prev.goals.map((g) => (g.id === id ? { ...g, ...updates } : g)),
-    }));
+    setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, ...updates } : g)));
   };
 
   const deleteGoal = (id: string) => {
-    setWeekState((prev) => ({
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+    // Unlink from tasks
+    setWeekSpecificState((prev) => ({
       ...prev,
-      goals: prev.goals.filter((g) => g.id !== id),
-      // Unlink from tasks
       tasks: prev.tasks.map((t) => {
         if (!t.goalIds?.includes(id)) return t;
         const updatedGoalIds = t.goalIds.filter((gid) => gid !== id);
@@ -491,10 +506,7 @@ export function useWeekState() {
       color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`,
       createdAt: new Date().toISOString(),
     };
-    setWeekState((prev) => ({
-      ...prev,
-      companions: [...prev.companions, newComp],
-    }));
+    setCompanions((prev) => [...prev, newComp]);
     return id;
   };
 
@@ -502,19 +514,16 @@ export function useWeekState() {
     id: string,
     updates: Partial<Omit<Companion, "id" | "createdAt">>
   ) => {
-    setWeekState((prev) => ({
-      ...prev,
-      companions: prev.companions.map((c) =>
-        c.id === id ? { ...c, ...updates } : c
-      ),
-    }));
+    setCompanions((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    );
   };
 
   const deleteCompanion = (id: string) => {
-    setWeekState((prev) => ({
+    setCompanions((prev) => prev.filter((c) => c.id !== id));
+    // Unlink from tasks
+    setWeekSpecificState((prev) => ({
       ...prev,
-      companions: prev.companions.filter((c) => c.id !== id),
-      // Unlink from tasks
       tasks: prev.tasks.map((t) => ({
         ...t,
         companionIds: t.companionIds?.filter((cid) => cid !== id),
@@ -524,7 +533,7 @@ export function useWeekState() {
 
   // --- LINKING ACTIONS ---
   const setTaskGoals = (taskId: string, goalIds: string[]) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) =>
         t.id === taskId
@@ -535,7 +544,7 @@ export function useWeekState() {
   };
 
   const setTaskCompanions = (taskId: string, companionIds: string[]) => {
-    setWeekState((prev) => ({
+    setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) =>
         t.id === taskId ? { ...t, companionIds } : t
@@ -544,12 +553,17 @@ export function useWeekState() {
   };
 
   const setWeekStart = (weekStartISO: string) => {
-    setWeekState(loadWeekStateForStart(weekStartISO));
+    const newWeekData = loadWeekStateForStart(weekStartISO);
+    // Only update week-specific data, preserve global profiles
+    setWeekSpecificState({
+      weekStart: newWeekData.weekStart,
+      tasks: newWeekData.tasks,
+      groups: newWeekData.groups,
+    });
   };
 
   return {
     weekState,
-    setWeekState,
     actions: {
       addTask,
       addGroup,

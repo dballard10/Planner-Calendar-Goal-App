@@ -4,8 +4,13 @@ import CalendarView from "./components/calendar/CalendarView";
 import GoalsPage from "./components/goals/GoalsPage";
 import CompanionsPage from "./components/goals/CompanionsPage";
 import SettingsPage from "./components/settings/SettingsPage";
+import { NotesPage } from "./components/notes/NotesPage";
 import { AppShellLayout } from "./components/layout/AppShellLayout";
-import { useWeekState, getMostRecentSunday, formatDateISO } from "./hooks/useWeekState";
+import {
+  useWeekState,
+  getMostRecentSunday,
+  formatDateISO,
+} from "./hooks/useWeekState";
 import { convertWeekToCalendarEvents } from "./lib/calendar/eventAdapters";
 import { availableMockWeekStartsISO } from "./mock/weeks";
 
@@ -36,10 +41,7 @@ function App() {
   }, [weekState]);
 
   return (
-    <AppShellLayout
-      activeTab={activeTab}
-      onTabChange={handleTabChange}
-    >
+    <AppShellLayout activeTab={activeTab} onTabChange={handleTabChange}>
       {activeTab === "weekly" && (
         <WeeklyView
           weekState={weekState}
@@ -67,6 +69,7 @@ function App() {
       {activeTab === "settings" && (
         <SettingsPage weekState={weekState} actions={actions} />
       )}
+      {activeTab === "notes" && <NotesPage />}
     </AppShellLayout>
   );
 }

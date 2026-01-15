@@ -53,9 +53,14 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 // Generate dynamic gradient style for task cards based on custom color
-export function getDynamicTaskCardGradientStyle(colorHex: string): React.CSSProperties {
+export function getDynamicTaskCardGradientStyle(
+  colorHex: string
+): React.CSSProperties {
   return {
-    background: `linear-gradient(to right, ${hexToRgba(colorHex, 0.7)}, rgb(2, 6, 23))`,
+    background: `linear-gradient(to right, ${hexToRgba(
+      colorHex,
+      0.7
+    )}, rgb(2, 6, 23))`,
   };
 }
 
@@ -67,5 +72,3 @@ export function getTaskCardBaseClasses(options: TaskCardStyleOptions = {}) {
     : "cursor-default";
   return `${textClass} border-slate-700 hover:border-slate-500 shadow-sm ${interactionClass}`;
 }
-
-

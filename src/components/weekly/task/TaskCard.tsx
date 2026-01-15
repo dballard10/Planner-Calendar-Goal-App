@@ -23,6 +23,7 @@ import {
 import { InlineMarkdown } from "../shared/InlineMarkdown";
 import { getInitials } from "../utils/name";
 import { useAppSettings } from "../../../context/AppSettingsContext";
+import CompanionAvatar from "../../ui/CompanionAvatar";
 
 interface TaskCardProps {
   task: Task;
@@ -244,16 +245,22 @@ export default function TaskCard({
                   />
                 )}
                 {taskCompanions.length > 0 && (
-                  <AvatarStack
-                    items={taskCompanions.map((c) => ({
-                      id: c.id,
-                      content: getInitials(c.name),
-                      label: c.name,
-                      bgColor: c.color || "#64748b",
-                    }))}
-                    maxVisible={3}
-                    size={22}
-                  />
+                  <div className="flex items-center -space-x-1.5">
+                    {taskCompanions.slice(0, 3).map((c) => (
+                      <CompanionAvatar
+                        key={c.id}
+                        name={c.name}
+                        color={c.color}
+                        size="sm"
+                        className="border border-slate-800"
+                      />
+                    ))}
+                    {taskCompanions.length > 3 && (
+                      <div className="w-5 h-5 rounded-full bg-slate-700 border border-slate-800 flex items-center justify-center text-[8px] text-slate-400 font-medium">
+                        +{taskCompanions.length - 3}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

@@ -10,6 +10,8 @@ interface RightSidePanelProps {
   children?: React.ReactNode;
   className?: string;
   showFloatingTrigger?: boolean;
+  headerActions?: React.ReactNode;
+  subHeader?: React.ReactNode;
 }
 
 export function RightSidePanel({
@@ -19,6 +21,8 @@ export function RightSidePanel({
   children,
   className = "",
   showFloatingTrigger = false,
+  headerActions,
+  subHeader,
 }: RightSidePanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -176,6 +180,7 @@ export function RightSidePanel({
           <div className="flex items-center justify-between p-3.5 border-b border-slate-700 bg-slate-800/50">
             <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
             <div className="flex items-center gap-1">
+              {headerActions}
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="p-1 text-slate-400 hover:text-slate-100 transition-colors rounded hover:bg-slate-800"
@@ -197,6 +202,13 @@ export function RightSidePanel({
               </button>
             </div>
           </div>
+
+          {/* Sub Header (e.g. Tabs) */}
+          {subHeader && (
+            <div className="border-b border-slate-700 bg-slate-900/50">
+              {subHeader}
+            </div>
+          )}
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">{children}</div>

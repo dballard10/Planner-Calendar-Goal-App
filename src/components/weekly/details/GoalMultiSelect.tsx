@@ -1,5 +1,11 @@
 import { useMemo, useRef, useState } from "react";
-import { IconTarget, IconChevronDown, IconCheck, IconX, IconSearch } from "@tabler/icons-react";
+import {
+  IconTarget,
+  IconChevronDown,
+  IconCheck,
+  IconX,
+  IconSearch,
+} from "@tabler/icons-react";
 import type { Goal } from "../../../types/weekly";
 import {
   TASK_GOAL_BUTTON,
@@ -34,10 +40,14 @@ export function GoalMultiSelect({
   const [searchQuery, setSearchQuery] = useState("");
   const goalDropdownRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside([goalDropdownRef], () => {
-    setIsGoalDropdownOpen(false);
-    setSearchQuery("");
-  }, isGoalDropdownOpen);
+  useClickOutside(
+    [goalDropdownRef],
+    () => {
+      setIsGoalDropdownOpen(false);
+      setSearchQuery("");
+    },
+    isGoalDropdownOpen
+  );
 
   const selectedGoals = useMemo(
     () =>
@@ -74,8 +84,10 @@ export function GoalMultiSelect({
       >
         <span className="text-slate-400 select-none">
           {selectedGoals.length > 0
-            ? `${selectedGoals.length} goal${selectedGoals.length === 1 ? "" : "s"} linked`
-            : "Select goals..."}
+            ? `${selectedGoals.length} goal${
+                selectedGoals.length === 1 ? "" : "s"
+              } linked`
+            : "Select goals"}
         </span>
         <IconChevronDown
           className={`w-4 h-4 text-slate-500 transition-transform ${
@@ -106,17 +118,25 @@ export function GoalMultiSelect({
                     key={g.id}
                     onClick={() => handleToggleGoal(g.id)}
                     className={`${TASK_GOAL_BUTTON} ${
-                      isSelected ? TASK_GOAL_BUTTON_SELECTED : TASK_GOAL_BUTTON_UNSELECTED
+                      isSelected
+                        ? TASK_GOAL_BUTTON_SELECTED
+                        : TASK_GOAL_BUTTON_UNSELECTED
                     }`}
                   >
-                    <span className="flex-shrink-0 w-5 text-center">{g.emoji}</span>
+                    <span className="flex-shrink-0 w-5 text-center">
+                      {g.emoji}
+                    </span>
                     <span className="flex-1 truncate">{g.name}</span>
-                    {isSelected && <IconCheck className="w-4 h-4 text-indigo-400" />}
+                    {isSelected && (
+                      <IconCheck className="w-4 h-4 text-indigo-400" />
+                    )}
                   </button>
                 );
               })
             ) : (
-              <div className="p-3 text-xs text-slate-500 text-center italic">No goals found</div>
+              <div className="p-3 text-xs text-slate-500 text-center italic">
+                No goals found
+              </div>
             )}
           </div>
         </div>
@@ -152,5 +172,3 @@ export function GoalMultiSelect({
     </div>
   );
 }
-
-
