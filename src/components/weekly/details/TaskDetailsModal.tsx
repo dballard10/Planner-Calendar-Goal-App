@@ -31,6 +31,7 @@ interface TaskDetailsModalProps {
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
   onLocationChange?: (location?: TaskLocation) => void;
+  onDelete?: () => void;
 }
 
 export default function TaskDetailsModal({
@@ -46,6 +47,7 @@ export default function TaskDetailsModal({
   onCompanionsChange,
   onLinksChange,
   onLocationChange,
+  onDelete,
 }: TaskDetailsModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -77,6 +79,7 @@ export default function TaskDetailsModal({
             onCompanionsChange={onCompanionsChange}
             onLinksChange={onLinksChange}
             onLocationChange={onLocationChange}
+            onDelete={onDelete}
           />
         </div>
       </div>

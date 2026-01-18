@@ -79,7 +79,7 @@ export function LinksEditor({ linksMarkdown, onChange }: LinksEditorProps) {
           </button>
         </div>
       </div>
-      {linkEntries.length > 0 ? (
+      {linkEntries.length > 0 && (
         <div className="flex flex-col gap-2 pt-1">
           {linkEntries.map((entry) => (
             <div
@@ -104,8 +104,6 @@ export function LinksEditor({ linksMarkdown, onChange }: LinksEditorProps) {
             </div>
           ))}
         </div>
-      ) : (
-        <p className="text-xs text-slate-500 italic">No links added yet.</p>
       )}
     </div>
   );

@@ -15,8 +15,8 @@ import { convertWeekToCalendarEvents } from "./lib/calendar/eventAdapters";
 import { availableMockWeekStartsISO } from "./mock/weeks";
 
 function App() {
-  const [activeTab, setActiveTab] = useState("weekly");
-  const { weekState, actions } = useWeekState();
+  const [activeTab, setActiveTab] = useState("notes");
+  const { weekState, actions, availableWeekStartsISO } = useWeekState();
   const [pendingWeeklyTaskId, setPendingWeeklyTaskId] = useState<string | null>(
     null
   );
@@ -48,11 +48,12 @@ function App() {
           actions={actions}
           openTaskId={pendingWeeklyTaskId}
           onOpenTaskHandled={() => setPendingWeeklyTaskId(null)}
-          availableWeekStartsISO={availableMockWeekStartsISO}
+          availableWeekStartsISO={availableWeekStartsISO}
           onSelectWeekStart={(iso) => {
             actions.setWeekStart(iso);
             setActiveTab("weekly");
           }}
+          onCreateCurrentWeek={actions.createOrSelectCurrentWeek}
         />
       )}
       {activeTab === "calendar" && <CalendarView events={calendarEvents} />}

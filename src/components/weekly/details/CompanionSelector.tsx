@@ -151,7 +151,7 @@ export function CompanionSelector({
       )}
 
       <div className={TASK_COMPANION_SELECTED_LIST}>
-        {selectedCompanions.length > 0 ? (
+        {selectedCompanions.length > 0 && (
           <>
             {selectedCompanions
               .slice(0, showAllCompanions ? undefined : 5)
@@ -188,10 +188,6 @@ export function CompanionSelector({
               </button>
             )}
           </>
-        ) : (
-          <div className="text-xs text-slate-500 italic">
-            No companions linked.
-          </div>
         )}
       </div>
     </div>

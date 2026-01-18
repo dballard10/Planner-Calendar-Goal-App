@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   Task,
@@ -10,8 +10,20 @@ import type {
 import DayCardHeader from "./DayCardHeader";
 import TaskCard from "../task/TaskCard";
 import AddButton from "./AddButton";
-import DayCardSettings from "./DayCardSettings";
+import DayCardSettings, {
+  type TaskFilter,
+  type DaySortMode,
+} from "./DayCardSettings";
 import GroupCard from "../group/GroupCard";
+import { ITEM_TYPE_PRIORITIES } from "../../../lib/itemTypeConfig";
+
+// Status priority: completed first, then cancelled, failed, open last
+const STATUS_RANK: Record<TaskStatus, number> = {
+  completed: 0,
+  cancelled: 1,
+  failed: 2,
+  open: 3,
+};
 
 interface DayCardProps {
   dayIndex: number;
@@ -58,6 +70,64 @@ export default function DayCard({
   const isEmpty = tasks.length === 0 && groups.length === 0;
   const [isCollapsed, setIsCollapsed] = useState(isEmpty);
 
+  // Per-day filter state
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
+
+  // Per-day sort state
+  const [sortMode, setSortMode] = useState<DaySortMode>("position");
+
+  // Task comparator based on current sort mode
+  const compareTasksBy = useCallback(
+    (a: Task, b: Task): number => {
+      let result = 0;
+
+      switch (sortMode) {
+        case "titleAsc": {
+          const titleA = a.title.trim().toLocaleLowerCase();
+          const titleB = b.title.trim().toLocaleLowerCase();
+          result = titleA.localeCompare(titleB);
+          break;
+        }
+        case "type": {
+          const rankA = ITEM_TYPE_PRIORITIES.indexOf(a.type);
+          const rankB = ITEM_TYPE_PRIORITIES.indexOf(b.type);
+          result = rankA - rankB;
+          break;
+        }
+        case "status": {
+          result = STATUS_RANK[a.status] - STATUS_RANK[b.status];
+          break;
+        }
+        case "createdAt": {
+          result =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        }
+        case "position":
+        default:
+          result = a.position - b.position;
+          break;
+      }
+
+      // Tie-breakers: position -> createdAt -> title -> id
+      if (result === 0) result = a.position - b.position;
+      if (result === 0) {
+        result =
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      if (result === 0) {
+        result = a.title
+          .trim()
+          .toLocaleLowerCase()
+          .localeCompare(b.title.trim().toLocaleLowerCase());
+      }
+      if (result === 0) result = a.id.localeCompare(b.id);
+
+      return result;
+    },
+    [sortMode]
+  );
+
   // Automatically expand when content is added
   useEffect(() => {
     if (!isEmpty) {
@@ -65,26 +135,36 @@ export default function DayCard({
     }
   }, [isEmpty]);
 
-  // Separate root tasks from group tasks (if caller hasn't already filtered)
-  // Assuming 'tasks' prop passed here might contain all tasks for the day
-  // But WeeklyView filters by dayIndex. We need to filter by groupId here.
-  const rootTasks = useMemo(() => tasks.filter((t) => !t.groupId), [tasks]);
+  // Apply task filter before splitting into root/group tasks
+  const visibleTasks = useMemo(
+    () =>
+      taskFilter === "all"
+        ? tasks
+        : tasks.filter((t) => t.status === taskFilter),
+    [tasks, taskFilter]
+  );
+
+  // Separate root tasks from group tasks and apply sorting
+  const rootTasks = useMemo(
+    () =>
+      visibleTasks
+        .filter((t) => !t.groupId)
+        .sort(compareTasksBy),
+    [visibleTasks, compareTasksBy]
+  );
   const tasksByGroupId = useMemo(() => {
     const map = new Map<string, Task[]>();
-    tasks.forEach((task) => {
+    visibleTasks.forEach((task) => {
       if (!task.groupId) return;
       const list = map.get(task.groupId) ?? [];
       list.push(task);
       map.set(task.groupId, list);
     });
     map.forEach((list, key) =>
-      map.set(
-        key,
-        [...list].sort((a, b) => a.position - b.position)
-      )
+      map.set(key, [...list].sort(compareTasksBy))
     );
     return map;
-  }, [tasks]);
+  }, [visibleTasks, compareTasksBy]);
 
   return (
     <div className="flex flex-col bg-slate-1000 rounded-lg border border-slate-700 max-w-5xl transition-all duration-300 ease-in-out">
@@ -94,7 +174,12 @@ export default function DayCard({
         }`}
       >
         <div className="flex justify-start">
-          <DayCardSettings />
+          <DayCardSettings
+            taskFilter={taskFilter}
+            onTaskFilterChange={setTaskFilter}
+            sortMode={sortMode}
+            onSortModeChange={setSortMode}
+          />
         </div>
         <div className="flex justify-center">
           <DayCardHeader

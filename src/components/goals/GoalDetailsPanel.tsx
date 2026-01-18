@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { IconTrash } from "@tabler/icons-react";
 import type { Goal, Task, TaskStatus } from "../../types/weekly";
 import GoalColorSelect from "./GoalColorSelect";
 import type { GoalAccentColor } from "./goalStyles";
@@ -27,6 +28,7 @@ interface GoalDetailsPanelProps {
   linkedTasks: Task[];
   onUpdate?: (updates: Partial<Omit<Goal, "id" | "createdAt">>) => void;
   onOpenTask?: (taskId: string) => void;
+  onDelete?: () => void;
 }
 
 export default function GoalDetailsPanel({
@@ -34,12 +36,14 @@ export default function GoalDetailsPanel({
   linkedTasks,
   onUpdate,
   onOpenTask,
+  onDelete,
 }: GoalDetailsPanelProps) {
   const [description, setDescription] = useState(goal.description ?? "");
   const [color, setColor] = useState<GoalAccentColor>(
     getInitialColor(goal.color)
   );
   const [dueDate, setDueDate] = useState(goal.dueDate ?? "");
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const activeTasks = linkedTasks.filter(
     (task) => task.status === "open"
@@ -55,6 +59,7 @@ export default function GoalDetailsPanel({
     setDescription(goal.description ?? "");
     setColor(getInitialColor(goal.color));
     setDueDate(goal.dueDate ?? "");
+    setIsConfirmingDelete(false);
   }, [goal.id, goal.description, goal.color, goal.dueDate]);
 
   const sendUpdate = (updates: Partial<Omit<Goal, "id" | "createdAt">>) => {
@@ -207,6 +212,40 @@ export default function GoalDetailsPanel({
           </div>
         )}
       </div>
+
+      {onDelete && (
+        <div className="mt-4 pt-4 border-t border-slate-700">
+          {isConfirmingDelete ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete();
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition"
+              >
+                Confirm delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsConfirmingDelete(false)}
+                className="px-4 py-2 text-sm font-medium rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsConfirmingDelete(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 hover:border-rose-500/50 transition"
+            >
+              <IconTrash className="w-4 h-4" />
+              Delete goal
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

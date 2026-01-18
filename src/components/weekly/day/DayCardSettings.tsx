@@ -7,10 +7,48 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredMenu } from "../shared/useAnchoredMenu";
+import type { TaskStatus } from "../../../types/weekly";
 
 type MenuType = "sort" | "filter" | "settings" | null;
 
-export default function DayCardSettings() {
+export type TaskFilter = "all" | TaskStatus;
+
+export type DaySortMode =
+  | "position"
+  | "createdAt"
+  | "titleAsc"
+  | "type"
+  | "status";
+
+interface DayCardSettingsProps {
+  taskFilter: TaskFilter;
+  onTaskFilterChange: (next: TaskFilter) => void;
+  sortMode: DaySortMode;
+  onSortModeChange: (next: DaySortMode) => void;
+}
+
+const FILTER_OPTIONS: Array<{ value: TaskFilter; label: string }> = [
+  { value: "all", label: "All tasks" },
+  { value: "open", label: "Open only" },
+  { value: "completed", label: "Completed only" },
+  { value: "cancelled", label: "Cancelled only" },
+  { value: "failed", label: "Failed only" },
+];
+
+const SORT_OPTIONS: Array<{ value: DaySortMode; label: string }> = [
+  { value: "position", label: "Default" },
+  { value: "titleAsc", label: "Title (A-Z)" },
+  { value: "type", label: "Task type" },
+  { value: "status", label: "Status" },
+  { value: "createdAt", label: "Created time" },
+];
+
+export default function DayCardSettings({
+  taskFilter,
+  onTaskFilterChange,
+  sortMode,
+  onSortModeChange,
+}: DayCardSettingsProps) {
   const [openMenu, setOpenMenu] = useState<MenuType>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
@@ -178,35 +216,52 @@ export default function DayCardSettings() {
               }}
             >
               <div className="py-1">
-                {openMenu === "sort" && (
-                  <>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      By status
-                    </button>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      By created time
-                    </button>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      By title (A-Z)
-                    </button>
-                  </>
-                )}
-                {openMenu === "filter" && (
-                  <>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      All tasks
-                    </button>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      Open only
-                    </button>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      Completed only
-                    </button>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      Failed only
-                    </button>
-                  </>
-                )}
+                {openMenu === "sort" &&
+                  SORT_OPTIONS.map((option) => {
+                    const isSelected = sortMode === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => {
+                          onSortModeChange(option.value);
+                          setOpenMenu(null);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs ${
+                          isSelected
+                            ? "bg-slate-800 text-slate-100"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                {openMenu === "filter" &&
+                  FILTER_OPTIONS.map((option) => {
+                    const isSelected = taskFilter === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => {
+                          onTaskFilterChange(option.value);
+                          setOpenMenu(null);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs ${
+                          isSelected
+                            ? "bg-slate-800 text-slate-100"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
                 {openMenu === "settings" && (
                   <>
                     <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">

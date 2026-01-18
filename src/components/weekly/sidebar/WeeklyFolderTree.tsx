@@ -1,4 +1,9 @@
-import { IconChevronRight } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconFolder,
+  IconFileText,
+} from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 
 interface WeeklyFolderTreeProps {
@@ -46,13 +51,6 @@ function buildWeekItems(isoDates: string[]): WeekItem[] {
       };
     })
     .sort((a, b) => (a.iso < b.iso ? 1 : -1));
-}
-
-function sanitizeId(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 export function WeeklyFolderTree({
@@ -158,78 +156,95 @@ export function WeeklyFolderTree({
   };
 
   return (
-    <div className="space-y-3 text-sm text-slate-200">
-      {Object.entries(groupedByYear).map(([year, months]) => {
-        const yearId = `year-${sanitizeId(year)}`;
-        const isYearExpanded = expandedYears.has(year);
-        return (
-          <div key={year} className="space-y-1">
-            <button
-              type="button"
-              onClick={() => toggleYear(year)}
-              className="flex items-center gap-2 font-semibold text-slate-100 transition-colors hover:text-slate-50"
-              aria-expanded={isYearExpanded}
-              aria-controls={yearId}
-            >
-              <IconChevronRight
-                className={`w-3 h-3 transition-transform ${
-                  isYearExpanded ? "rotate-90" : ""
-                }`}
-              />
-              {year}
-            </button>
-            {isYearExpanded && (
-              <div id={yearId} className="ml-3 space-y-2">
-                {Object.entries(months).map(([month, weeks]) => {
-                  const monthKey = `${year}::${month}`;
-                  const monthId = `month-${sanitizeId(monthKey)}`;
-                  const isMonthExpanded = expandedMonths.has(monthKey);
-                  return (
-                    <div key={month} className="space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => toggleMonth(monthKey)}
-                        className="flex w-full items-center gap-2 text-left text-sm font-medium text-slate-300 transition-colors hover:text-slate-200"
-                        aria-expanded={isMonthExpanded}
-                        aria-controls={monthId}
-                      >
-                        <IconChevronRight
-                          className={`w-3 h-3 transition-transform ${
-                            isMonthExpanded ? "rotate-90" : ""
-                          }`}
-                        />
-                        <span>{month}</span>
-                      </button>
-                      {isMonthExpanded && (
-                        <div id={monthId} className="ml-3 space-y-1">
-                          {weeks.map((week) => {
-                            const isSelected =
-                              week.iso === selectedWeekStartISO;
-                            return (
-                              <button
-                                key={week.iso}
-                                type="button"
-                                onClick={() => onSelectWeekStart(week.iso)}
-                                className={`w-full text-left font-medium transition-colors ${
-                                  isSelected
-                                    ? "text-slate-100"
-                                    : "text-slate-400 hover:text-slate-200"
-                                }`}
-                              >
-                                {week.weekLabel}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto -mx-2 px-2">
+        <ul className="space-y-0.5">
+          {Object.entries(groupedByYear).map(([year, months]) => {
+            const isYearExpanded = expandedYears.has(year);
+            return (
+              <li key={year}>
+                <button
+                  type="button"
+                  onClick={() => toggleYear(year)}
+                  className="w-full flex items-center gap-1.5 px-2 py-1 rounded transition-colors group hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                  style={{ paddingLeft: "8px" }}
+                >
+                  <span className="shrink-0">
+                    {isYearExpanded ? (
+                      <IconChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <IconChevronRight className="w-3.5 h-3.5" />
+                    )}
+                  </span>
+                  <IconFolder className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />
+                  <span className="text-sm font-medium truncate">{year}</span>
+                </button>
+
+                {isYearExpanded && (
+                  <ul className="space-y-0.5">
+                    {Object.entries(months).map(([month, weeks]) => {
+                      const monthKey = `${year}::${month}`;
+                      const isMonthExpanded = expandedMonths.has(monthKey);
+                      return (
+                        <li key={month}>
+                          <button
+                            type="button"
+                            onClick={() => toggleMonth(monthKey)}
+                            className="w-full flex items-center gap-1.5 px-2 py-1 rounded transition-colors group hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                            style={{ paddingLeft: "20px" }}
+                          >
+                            <span className="shrink-0">
+                              {isMonthExpanded ? (
+                                <IconChevronDown className="w-3.5 h-3.5" />
+                              ) : (
+                                <IconChevronRight className="w-3.5 h-3.5" />
+                              )}
+                            </span>
+                            <IconFolder className="w-4 h-4 text-slate-500 group-hover:text-slate-400 shrink-0" />
+                            <span className="text-sm font-medium truncate">
+                              {month}
+                            </span>
+                          </button>
+
+                          {isMonthExpanded && (
+                            <ul className="space-y-0.5">
+                              {weeks.map((week) => {
+                                const isSelected =
+                                  week.iso === selectedWeekStartISO;
+                                return (
+                                  <li key={week.iso}>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onSelectWeekStart(week.iso)
+                                      }
+                                      className={`w-full flex items-center gap-2 px-2 py-1 rounded transition-colors ${
+                                        isSelected
+                                          ? "bg-slate-700 text-slate-100"
+                                          : "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                                      }`}
+                                      style={{ paddingLeft: "52px" }}
+                                    >
+                                      <IconFileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                      <span className="text-sm truncate">
+                                        {week.weekLabel}
+                                      </span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }

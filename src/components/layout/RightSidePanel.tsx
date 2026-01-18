@@ -12,6 +12,11 @@ interface RightSidePanelProps {
   showFloatingTrigger?: boolean;
   headerActions?: React.ReactNode;
   subHeader?: React.ReactNode;
+  resizable?: boolean;
+  persistWidthKey?: string;
+  defaultWidthPx?: number;
+  minWidthPx?: number;
+  maxWidthPaddingPx?: number;
 }
 
 export function RightSidePanel({
@@ -23,15 +28,31 @@ export function RightSidePanel({
   showFloatingTrigger = false,
   headerActions,
   subHeader,
+  resizable = true,
+  persistWidthKey,
+  defaultWidthPx = 384,
+  minWidthPx = 280,
+  maxWidthPaddingPx = 16,
 }: RightSidePanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [widthTargets, setWidthTargets] = useState(() => ({
-    collapsed: 384,
-    expanded: 384,
-  }));
-  const { collapsed: collapsedWidthPx, expanded: expandedWidthPx } =
-    widthTargets;
+
+  const [collapsedWidthPx, setCollapsedWidthPx] = useState(() => {
+    if (typeof window === "undefined" || !persistWidthKey) {
+      return defaultWidthPx;
+    }
+    const saved = localStorage.getItem(persistWidthKey);
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    return defaultWidthPx;
+  });
+
+  const [expandedWidthPx, setExpandedWidthPx] = useState(defaultWidthPx);
+  const [isResizing, setIsResizing] = useState(false);
 
   // Reset expanded state when panel closes, so it opens in normal mode next time
   useEffect(() => {
@@ -45,22 +66,12 @@ export function RightSidePanel({
       return;
     }
 
-    const updateWidths = () => {
-      if (typeof window === "undefined") {
-        return;
-      }
+    const updateMaxAndClamp = () => {
       const viewportWidth = window.innerWidth;
-      const rootFontSize =
-        parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      const collapsed = Math.min(24 * rootFontSize, viewportWidth);
       let sidebarWidth = 0;
-      const rootEl = panelRef.current?.closest(
-        ".app-shell-root"
-      ) as HTMLElement | null;
+      const rootEl = panelRef.current?.closest(".app-shell-root") as HTMLElement | null;
       if (rootEl) {
-        const raw = getComputedStyle(rootEl).getPropertyValue(
-          "--app-left-sidebar-width"
-        );
+        const raw = getComputedStyle(rootEl).getPropertyValue("--app-left-sidebar-width");
         const parsed = parseFloat(raw);
         if (!Number.isNaN(parsed)) {
           sidebarWidth = parsed;
@@ -69,27 +80,23 @@ export function RightSidePanel({
       if (!sidebarWidth) {
         sidebarWidth = 260;
       }
-      const expanded = Math.max(0, viewportWidth - sidebarWidth);
 
-      setWidthTargets((prev) => {
-        if (prev.collapsed === collapsed && prev.expanded === expanded) {
-          return prev;
-        }
-        return { collapsed, expanded };
+      const maxPossible = Math.max(minWidthPx, viewportWidth - sidebarWidth - maxWidthPaddingPx);
+      setExpandedWidthPx(viewportWidth - sidebarWidth);
+
+      setCollapsedWidthPx((prev) => {
+        const clamped = Math.min(Math.max(prev, minWidthPx), maxPossible);
+        return clamped;
       });
     };
 
-    updateWidths();
-    const handleResize = () => updateWidths();
+    updateMaxAndClamp();
+    const handleResize = () => updateMaxAndClamp();
     window.addEventListener("resize", handleResize);
 
-    const rootEl = panelRef.current?.closest(
-      ".app-shell-root"
-    ) as HTMLElement | null;
+    const rootEl = panelRef.current?.closest(".app-shell-root") as HTMLElement | null;
     const observer =
-      rootEl && "MutationObserver" in window
-        ? new MutationObserver(() => updateWidths())
-        : null;
+      rootEl && "MutationObserver" in window ? new MutationObserver(() => updateMaxAndClamp()) : null;
     if (observer && rootEl) {
       observer.observe(rootEl, {
         attributes: true,
@@ -101,7 +108,65 @@ export function RightSidePanel({
       window.removeEventListener("resize", handleResize);
       observer?.disconnect();
     };
-  }, []);
+  }, [minWidthPx, maxWidthPaddingPx]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!resizable) return;
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startWidth = isExpanded ? expandedWidthPx : collapsedWidthPx;
+    const snapPx = 16;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = startWidth - deltaX;
+
+      // We need to know the current maxPossible width to clamp correctly
+      const viewportWidth = window.innerWidth;
+      let sidebarWidth = 0;
+      const rootEl = panelRef.current?.closest(".app-shell-root") as HTMLElement | null;
+      if (rootEl) {
+        const raw = getComputedStyle(rootEl).getPropertyValue("--app-left-sidebar-width");
+        const parsed = parseFloat(raw);
+        if (!Number.isNaN(parsed)) {
+          sidebarWidth = parsed;
+        }
+      }
+      if (!sidebarWidth) sidebarWidth = 260;
+      const maxPossible = Math.max(minWidthPx, viewportWidth - sidebarWidth - maxWidthPaddingPx);
+      const expandedWidth = viewportWidth - sidebarWidth;
+
+      if (newWidth >= expandedWidth - snapPx) {
+        setIsExpanded(true);
+      } else {
+        setIsExpanded(false);
+        setCollapsedWidthPx(Math.min(Math.max(newWidth, minWidthPx), maxPossible));
+      }
+    };
+
+    const handlePointerUp = () => {
+      setIsResizing(false);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+
+      // Persist the final width only if NOT expanded
+      setIsExpanded((currentlyExpanded) => {
+        if (!currentlyExpanded) {
+          setCollapsedWidthPx((finalWidth) => {
+            if (persistWidthKey) {
+              localStorage.setItem(persistWidthKey, Math.round(finalWidth).toString());
+            }
+            return finalWidth;
+          });
+        }
+        return currentlyExpanded;
+      });
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
 
   // Allow local toggle only if floating trigger is enabled and we need a way to open it
   // But typically the parent controls isOpen.
@@ -120,10 +185,24 @@ export function RightSidePanel({
       damping: 25,
       stiffness: 200,
     },
-    width: {
-      duration: 0.45,
-      ease: "easeInOut",
-    },
+    width: isResizing
+      ? { duration: 0 }
+      : {
+          duration: 0.45,
+          ease: "easeInOut",
+        },
+  };
+
+  const handleToggleExpanded = () => {
+    if (isExpanded) {
+      setIsExpanded(false);
+      setCollapsedWidthPx(defaultWidthPx);
+      if (persistWidthKey) {
+        localStorage.setItem(persistWidthKey, String(defaultWidthPx));
+      }
+    } else {
+      setIsExpanded(true);
+    }
   };
 
   return (
@@ -171,10 +250,24 @@ export function RightSidePanel({
           width: isExpanded ? expandedWidthPx : collapsedWidthPx,
         }}
         transition={panelTransition}
-        className={`fixed inset-y-0 right-0 z-40 bg-slate-900 border-l border-slate-700 shadow-2xl ${className}`}
+        className={`fixed inset-y-0 right-0 z-40 bg-slate-900 border-l border-slate-700 shadow-2xl ${className} ${
+          isResizing ? "select-none" : ""
+        }`}
         style={{ maxWidth: "100%" }}
         ref={panelRef}
       >
+        {/* Resize Handle */}
+        {resizable && (
+          <div
+            onPointerDown={handlePointerDown}
+            className={`absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize z-50 group hover:bg-indigo-500/30 transition-colors ${
+              isResizing ? "bg-indigo-500/50" : "bg-transparent"
+            }`}
+          >
+            <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-px h-8 bg-slate-700 group-hover:bg-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
+
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-3.5 border-b border-slate-700 bg-slate-800/50">
@@ -182,7 +275,7 @@ export function RightSidePanel({
             <div className="flex items-center gap-1">
               {headerActions}
               <button
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={handleToggleExpanded}
                 className="p-1 text-slate-400 hover:text-slate-100 transition-colors rounded hover:bg-slate-800"
                 aria-label={isExpanded ? "Exit full screen" : "Full screen"}
                 title={isExpanded ? "Exit full screen" : "Full screen"}

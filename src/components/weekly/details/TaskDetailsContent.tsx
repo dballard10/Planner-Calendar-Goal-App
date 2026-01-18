@@ -7,11 +7,14 @@ import type {
   Goal,
   Companion,
 } from "../../../types/weekly";
+import { IconTrash } from "@tabler/icons-react";
 import StatusSelector from "../task/StatusSelector";
 import TaskDetailsForm from "./TaskDetailsForm";
 import { ITEM_TYPE_STYLES, INFORMATIONAL_TYPES } from "../../../lib/itemTypeConfig";
 import type { ItemTypeStyle } from "../../../lib/itemTypeConfig";
 import {
+  TASK_DETAILS_ACTIONS_WRAPPER,
+  TASK_DETAILS_DELETE_BUTTON,
   TASK_DETAILS_HEADER,
   TASK_DETAILS_HEADER_ROW,
   TASK_DETAILS_ROOT,
@@ -41,6 +44,7 @@ interface TaskDetailsContentProps {
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
   onLocationChange?: (location?: TaskLocation) => void;
+  onDelete?: () => void;
 }
 
 // Helper to get initials
@@ -64,6 +68,7 @@ export default function TaskDetailsContent({
   onCompanionsChange,
   onLinksChange,
   onLocationChange,
+  onDelete,
 }: TaskDetailsContentProps) {
   const settings = useAppSettings();
   // We can initialize the form with data from the task later.
@@ -248,6 +253,20 @@ export default function TaskDetailsContent({
             onLocationChange={onLocationChange}
           />
         </div>
+
+        {/* Delete Action */}
+        {onDelete && (
+          <div className={TASK_DETAILS_ACTIONS_WRAPPER}>
+            <button
+              type="button"
+              onClick={onDelete}
+              className={TASK_DETAILS_DELETE_BUTTON}
+            >
+              <IconTrash className="w-4 h-4" />
+              Delete task
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

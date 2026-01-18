@@ -143,7 +143,7 @@ export function GoalMultiSelect({
       )}
 
       <div className={TASK_GOAL_PILLS_WRAP}>
-        {selectedGoals.length > 0 ? (
+        {selectedGoals.length > 0 &&
           selectedGoals.map((g) => (
             <button
               key={g.id}
@@ -164,10 +164,7 @@ export function GoalMultiSelect({
               </div>
               <span>{g.name}</span>
             </button>
-          ))
-        ) : (
-          <div className="text-xs text-slate-500 italic">No goal linked.</div>
-        )}
+          ))}
       </div>
     </div>
   );

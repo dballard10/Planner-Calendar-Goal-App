@@ -82,4 +82,6 @@ export const TASK_COMPANION_SHOW_MORE_BUTTON =
 
 export const TASK_FORM_WRAPPER = "flex-1 px-4 pb-4 pt-6 space-y-6";
 
-
+export const TASK_DETAILS_ACTIONS_WRAPPER = "mt-8 pt-6 border-t border-slate-700";
+export const TASK_DETAILS_DELETE_BUTTON =
+  "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/50 transition-colors";

@@ -27,6 +27,7 @@ interface TaskDetailsFullPageProps {
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
   onLocationChange?: (location?: TaskLocation) => void;
+  onDelete?: () => void;
 }
 
 export default function TaskDetailsFullPage({
@@ -41,6 +42,7 @@ export default function TaskDetailsFullPage({
   onCompanionsChange,
   onLinksChange,
   onLocationChange,
+  onDelete,
 }: TaskDetailsFullPageProps) {
   return (
     <div className={TASK_DETAILS_PAGE_CONTAINER}>
@@ -64,6 +66,7 @@ export default function TaskDetailsFullPage({
             onCompanionsChange={onCompanionsChange}
             onLinksChange={onLinksChange}
             onLocationChange={onLocationChange}
+            onDelete={onDelete}
           />
         </div>
       </div>

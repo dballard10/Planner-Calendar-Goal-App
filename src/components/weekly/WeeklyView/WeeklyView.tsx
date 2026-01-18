@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { IconFolders } from "@tabler/icons-react";
+import { IconFolders, IconPlus } from "@tabler/icons-react";
 import type {
   WeekState,
   TaskStatus,
@@ -42,6 +42,7 @@ interface WeeklyViewProps {
   onOpenTaskHandled?: () => void;
   availableWeekStartsISO: string[];
   onSelectWeekStart: (iso: string) => void;
+  onCreateCurrentWeek?: () => void;
 }
 
 export default function WeeklyView({
@@ -51,6 +52,7 @@ export default function WeeklyView({
   onOpenTaskHandled,
   availableWeekStartsISO,
   onSelectWeekStart,
+  onCreateCurrentWeek,
 }: WeeklyViewProps) {
   const [panelMode, setPanelMode] = useState<
     "overview" | "folders" | "taskDetails"
@@ -104,6 +106,14 @@ export default function WeeklyView({
   };
 
   const handleCloseDetails = () => {
+    closeDetails();
+  };
+
+  const handleDeleteTask = () => {
+    if (!selectedTaskId) return;
+    actions.deleteTask(selectedTaskId);
+    // Close the details surface immediately
+    setIsPanelOpen(false);
     closeDetails();
   };
 
@@ -167,6 +177,7 @@ export default function WeeklyView({
         actions.updateTaskLinks?.(selectedTask.id, links),
       onLocationChange: (loc?: TaskLocation) =>
         actions.updateTaskLocation?.(selectedTask.id, loc),
+      onDelete: handleDeleteTask,
     };
 
     return (
@@ -199,6 +210,7 @@ export default function WeeklyView({
         actions.updateTaskLinks?.(selectedTask.id, links),
       onLocationChange: (loc?: TaskLocation) =>
         actions.updateTaskLocation?.(selectedTask.id, loc),
+      onDelete: handleDeleteTask,
     };
 
   return (
@@ -269,6 +281,18 @@ export default function WeeklyView({
             ? "Task Details"
             : "Panel"
         }
+        headerActions={
+          panelMode === "folders" && (
+            <button
+              onClick={onCreateCurrentWeek}
+              className="p-1 text-slate-400 hover:text-slate-100 transition-colors rounded hover:bg-slate-800"
+              title="Create/Select current week"
+              aria-label="Create or select current week"
+            >
+              <IconPlus className="w-5 h-5" />
+            </button>
+          )
+        }
         isOpen={isPanelOpen}
         onClose={() => {
           setIsPanelOpen(false);
@@ -284,6 +308,7 @@ export default function WeeklyView({
             }, 500);
           }
         }}
+        persistWidthKey="rightPanelWidth:weekly"
       >
         {panelMode === "overview" && <WeeklyStatsPanel stats={weekStats} />}
         {panelMode === "folders" && (

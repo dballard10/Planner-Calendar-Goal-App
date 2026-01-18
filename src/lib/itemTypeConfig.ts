@@ -12,7 +12,7 @@ export interface ItemTypeStyle {
 export const ITEM_TYPE_STYLES: Record<WeeklyItemType, ItemTypeStyle> = {
   task: {
     label: "Task",
-    cardBackground: "bg-gradient-to-r from-emerald-600/70 to-emerald-900/90",
+    cardBackground: "bg-gradient-to-r from-emerald-800/70 to-emerald-950/90",
     textColor: "text-emerald-100",
     pillBackground: "bg-emerald-500/20 border border-emerald-400/40",
     badgeText: "text-emerald-200",
@@ -59,7 +59,3 @@ export const ITEM_TYPE_BADGES: Record<WeeklyItemType, string> = {
   birthday: "pink-500",
   holiday: "red-500",
 };
-
-
-
-

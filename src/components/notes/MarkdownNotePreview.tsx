@@ -6,6 +6,10 @@ interface MarkdownNotePreviewProps {
   className?: string;
 }
 
+/**
+ * Markdown preview component using CSS variables from index.css (--notes-*)
+ * for centralized theming alongside LiveMarkdownEditor.
+ */
 export function MarkdownNotePreview({
   content,
   className = "",
@@ -17,55 +21,55 @@ export function MarkdownNotePreview({
         components={{
           // Headings
           h1: ({ children }) => (
-            <h1 className="text-2xl font-bold text-slate-100 mb-4 mt-6 first:mt-0 pb-2 border-b border-slate-700">
+            <h1 className="text-2xl font-bold text-[color:var(--notes-fg-strong)] mb-4 mt-6 first:mt-0 no-underline border-b-0">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-xl font-semibold text-slate-100 mb-3 mt-5">
+            <h2 className="text-xl font-semibold text-[color:var(--notes-fg-strong)] mb-3 mt-5 no-underline border-b-0">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-lg font-semibold text-slate-200 mb-2 mt-4">
+            <h3 className="text-lg font-semibold text-[color:var(--notes-fg-heading-3)] mb-2 mt-4 no-underline border-b-0">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-base font-semibold text-slate-200 mb-2 mt-3">
+            <h4 className="text-base font-semibold text-[color:var(--notes-fg-heading-3)] mb-2 mt-3 no-underline border-b-0">
               {children}
             </h4>
           ),
           h5: ({ children }) => (
-            <h5 className="text-sm font-semibold text-slate-300 mb-1 mt-2">
+            <h5 className="text-sm font-semibold text-[color:var(--notes-fg)] mb-1 mt-2 no-underline border-b-0">
               {children}
             </h5>
           ),
           h6: ({ children }) => (
-            <h6 className="text-sm font-medium text-slate-400 mb-1 mt-2">
+            <h6 className="text-sm font-medium text-[color:var(--notes-muted)] mb-1 mt-2 no-underline border-b-0">
               {children}
             </h6>
           ),
 
           // Paragraphs and text
           p: ({ children }) => (
-            <p className="text-slate-300 leading-relaxed mb-3">{children}</p>
+            <p className="text-[color:var(--notes-fg)] leading-relaxed mb-3">{children}</p>
           ),
           strong: ({ children }) => (
-            <strong className="font-bold text-slate-100">{children}</strong>
+            <strong className="font-bold text-[color:var(--notes-fg-strong)]">{children}</strong>
           ),
           em: ({ children }) => (
-            <em className="italic text-slate-300">{children}</em>
+            <em className="italic text-[color:var(--notes-fg)]">{children}</em>
           ),
 
           // Lists
           ul: ({ children }) => (
-            <ul className="list-disc list-inside mb-3 space-y-1 text-slate-300">
+            <ul className="list-disc list-inside mb-3 space-y-1 text-[color:var(--notes-fg)]">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside mb-3 space-y-1 text-slate-300">
+            <ol className="list-decimal list-inside mb-3 space-y-1 text-[color:var(--notes-fg)]">
               {children}
             </ol>
           ),
@@ -74,7 +78,7 @@ export function MarkdownNotePreview({
             const isTaskItem = className?.includes("task-list-item");
             return (
               <li
-                className={`text-slate-300 ${
+                className={`text-[color:var(--notes-fg)] ${
                   isTaskItem ? "list-none flex items-start gap-2" : ""
                 }`}
               >
@@ -91,45 +95,37 @@ export function MarkdownNotePreview({
                   type="checkbox"
                   checked={checked}
                   readOnly
-                  className="mt-1 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-0 cursor-default"
+                  className="mt-1 rounded border-[color:var(--notes-checkbox-border)] bg-[color:var(--notes-checkbox-bg)] accent-[color:var(--notes-checkbox-checked-bg)] focus:ring-0 cursor-default"
                 />
               );
             }
             return null;
           },
 
-          // Links
-          a: ({ href, children }) => {
-            // Handle Obsidian-style wiki links [[Note Name]]
-            const isWikiLink = href?.startsWith("[[") || !href;
-            return (
-              <a
-                href={href}
-                className={`${
-                  isWikiLink
-                    ? "text-purple-400 hover:text-purple-300"
-                    : "text-cyan-400 hover:text-cyan-300"
-                } underline underline-offset-2 transition-colors`}
-                target={href?.startsWith("http") ? "_blank" : undefined}
-                rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-              >
-                {children}
-              </a>
-            );
-          },
+          // Links (all use same accent, including wiki links)
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              className="text-[color:var(--notes-link)] hover:opacity-80 underline underline-offset-2 transition-opacity"
+              target={href?.startsWith("http") ? "_blank" : undefined}
+              rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+            >
+              {children}
+            </a>
+          ),
 
           // Code
           code: ({ className, children }) => {
             const isBlock = className?.includes("language-");
             if (isBlock) {
               return (
-                <code className="block bg-slate-800 rounded-md p-4 text-sm font-mono text-slate-200 overflow-x-auto">
+                <code className="block bg-[color:var(--notes-code-bg)] rounded-md p-4 text-sm font-mono text-[color:var(--notes-fg-heading-3)] overflow-x-auto">
                   {children}
                 </code>
               );
             }
             return (
-              <code className="bg-slate-800 px-1.5 py-0.5 rounded text-sm font-mono text-cyan-300">
+              <code className="bg-[color:var(--notes-code-bg)] px-1.5 py-0.5 rounded text-sm font-mono text-[color:var(--notes-code-inline)]">
                 {children}
               </code>
             );
@@ -140,13 +136,13 @@ export function MarkdownNotePreview({
 
           // Blockquotes
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-slate-600 pl-4 py-1 my-3 text-slate-400 italic">
+            <blockquote className="border-l-4 border-[color:var(--notes-border-soft)] pl-4 py-1 my-3 text-[color:var(--notes-muted)] italic">
               {children}
             </blockquote>
           ),
 
           // Horizontal rule
-          hr: () => <hr className="border-slate-700 my-6" />,
+          hr: () => <hr className="border-[color:var(--notes-border)] my-6" />,
 
           // Tables (GFM)
           table: ({ children }) => (
@@ -157,19 +153,19 @@ export function MarkdownNotePreview({
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-slate-800">{children}</thead>
+            <thead className="bg-[color:var(--notes-code-bg)]">{children}</thead>
           ),
           tbody: ({ children }) => <tbody>{children}</tbody>,
           tr: ({ children }) => (
-            <tr className="border-b border-slate-700">{children}</tr>
+            <tr className="border-b border-[color:var(--notes-border)]">{children}</tr>
           ),
           th: ({ children }) => (
-            <th className="px-3 py-2 text-left font-semibold text-slate-200">
+            <th className="px-3 py-2 text-left font-semibold text-[color:var(--notes-fg-heading-3)]">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="px-3 py-2 text-slate-300">{children}</td>
+            <td className="px-3 py-2 text-[color:var(--notes-fg)]">{children}</td>
           ),
 
           // Images

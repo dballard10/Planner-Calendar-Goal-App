@@ -21,7 +21,6 @@ import {
   getDynamicTaskCardGradientStyle,
 } from "../styles";
 import { InlineMarkdown } from "../shared/InlineMarkdown";
-import { getInitials } from "../utils/name";
 import { useAppSettings } from "../../../context/AppSettingsContext";
 import CompanionAvatar from "../../ui/CompanionAvatar";
 
@@ -48,8 +47,6 @@ export default function TaskCard({
   onTitleChange,
   onDelete,
   onOpenDetailsSidePanel,
-  onOpenDetailsModal,
-  onOpenDetailsPage,
   isHighlighted = false,
 }: TaskCardProps) {
   const settings = useAppSettings();

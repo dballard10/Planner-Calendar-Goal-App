@@ -177,6 +177,14 @@ export default function GoalsPage({
     }
   };
 
+  const handleDeleteSelectedGoal = () => {
+    if (selectedGoal) {
+      actions.deleteGoal(selectedGoal.id);
+      setSelectedGoalId(null);
+      setReturnToStatsOnClose(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen pb-12">
       <PageHeader
@@ -280,6 +288,7 @@ export default function GoalsPage({
           setIsStatsPanelOpen(false);
           setReturnToStatsOnClose(false);
         }}
+        persistWidthKey="rightPanelWidth:goals:stats"
       >
         <div className="space-y-6 text-slate-300">
           <div className="flex items-center justify-between">
@@ -442,6 +451,7 @@ export default function GoalsPage({
         title="Goal Details"
         isOpen={!!selectedGoal}
         onClose={handleCloseGoalDetails}
+        persistWidthKey="rightPanelWidth:goals:details"
       >
         {selectedGoal && (
           <GoalDetailsPanel
@@ -449,6 +459,7 @@ export default function GoalsPage({
             linkedTasks={selectedGoalLinkedTasks}
             onUpdate={handleSelectedGoalUpdate}
             onOpenTask={onOpenWeeklyTask}
+            onDelete={handleDeleteSelectedGoal}
           />
         )}
       </RightSidePanel>

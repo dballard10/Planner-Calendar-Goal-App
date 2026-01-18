@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   WeekState,
   Task,
@@ -11,7 +11,20 @@ import type {
 } from "../types/weekly";
 import { GOAL_ACCENT_COLORS } from "../components/goals/goalStyles";
 import { parseWeeklyMarkdown } from "../lib/markdown/tasks";
-import { mockWeekMarkdownByStartISO } from "../mock/weeks";
+import { mockWeekMarkdownByStartISO, availableMockWeekStartsISO } from "../mock/weeks";
+
+const LOCAL_STORAGE_KEY = "weekly_user_data_v1";
+
+interface UserWeekData {
+  tasks: Task[];
+  groups: Group[];
+}
+
+interface UserDataStore {
+  weeks: Record<string, UserWeekData>;
+  companions: Companion[];
+  goals: Goal[];
+}
 
 // Helper to get the most recent Sunday
 export function getMostRecentSunday(): Date {
@@ -279,7 +292,23 @@ function createMockData(weekStart: string): {
   };
 }
 
-function loadWeekStateForStart(weekStart: string): WeekState {
+function loadWeekStateForStart(
+  weekStart: string,
+  userWeeks?: Record<string, UserWeekData>
+): WeekState {
+  // 1. Check user storage
+  if (userWeeks && userWeeks[weekStart]) {
+    const fallback = createMockData(weekStart);
+    return {
+      weekStart,
+      tasks: userWeeks[weekStart].tasks,
+      groups: userWeeks[weekStart].groups,
+      goals: fallback.goals,
+      companions: fallback.companions,
+    };
+  }
+
+  // 2. Check mock markdown
   const markdown = mockWeekMarkdownByStartISO[weekStart];
   const fallback = createMockData(weekStart);
 
@@ -302,15 +331,31 @@ function loadWeekStateForStart(weekStart: string): WeekState {
 }
 
 export function useWeekState() {
-  const weekStartDate = getMostRecentSunday();
-  const weekStartISO = formatDateISO(weekStartDate);
+  const initialWeekStartISO = useMemo(() => formatDateISO(getMostRecentSunday()), []);
 
-  // Initialize once with full data
-  const initialState = loadWeekStateForStart(weekStartISO);
+  // Initialize once from localStorage
+  const [dataStore, setDataStore] = useState<UserDataStore>(() => {
+    if (typeof window === "undefined") return { weeks: {}, companions: [], goals: [] };
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse weekly user data", e);
+      }
+    }
+    return { weeks: {}, companions: [], goals: [] };
+  });
+
+  const initialState = loadWeekStateForStart(initialWeekStartISO, dataStore.weeks);
 
   // Global profiles (persist across week changes)
-  const [companions, setCompanions] = useState<Companion[]>(initialState.companions);
-  const [goals, setGoals] = useState<Goal[]>(initialState.goals);
+  const [companions, setCompanions] = useState<Companion[]>(
+    dataStore.companions.length > 0 ? dataStore.companions : initialState.companions
+  );
+  const [goals, setGoals] = useState<Goal[]>(
+    dataStore.goals.length > 0 ? dataStore.goals : initialState.goals
+  );
 
   // Week-specific data
   const [weekSpecificState, setWeekSpecificState] = useState<{
@@ -323,12 +368,41 @@ export function useWeekState() {
     groups: initialState.groups,
   });
 
+  // Save everything to localStorage whenever state changes
+  useEffect(() => {
+    setDataStore((prev) => {
+      const updatedStore: UserDataStore = {
+        ...prev,
+        weeks: {
+          ...prev.weeks,
+          [weekSpecificState.weekStart]: {
+            tasks: weekSpecificState.tasks,
+            groups: weekSpecificState.groups,
+          },
+        },
+        companions,
+        goals,
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedStore));
+      return updatedStore;
+    });
+  }, [weekSpecificState, companions, goals]);
+
   // Combine for backwards compatibility
   const weekState: WeekState = {
     ...weekSpecificState,
     companions,
     goals,
   };
+
+  // Derived available weeks list
+  const availableWeekStartsISO = useMemo(() => {
+    const allStarts = new Set([
+      ...availableMockWeekStartsISO,
+      ...Object.keys(dataStore.weeks),
+    ]);
+    return Array.from(allStarts).sort((a, b) => (a < b ? 1 : -1));
+  }, [dataStore.weeks]);
 
   // Helper to create a task ID (UUID-like)
   const generateId = () => {
@@ -553,7 +627,7 @@ export function useWeekState() {
   };
 
   const setWeekStart = (weekStartISO: string) => {
-    const newWeekData = loadWeekStateForStart(weekStartISO);
+    const newWeekData = loadWeekStateForStart(weekStartISO, dataStore.weeks);
     // Only update week-specific data, preserve global profiles
     setWeekSpecificState({
       weekStart: newWeekData.weekStart,
@@ -562,8 +636,28 @@ export function useWeekState() {
     });
   };
 
+  const createOrSelectCurrentWeek = () => {
+    const todayISO = formatDateISO(getMostRecentSunday());
+    
+    // Check if it already exists in user store or mock data
+    const exists = dataStore.weeks[todayISO] || mockWeekMarkdownByStartISO[todayISO];
+    
+    if (!exists) {
+      // Create empty entry in user store
+      setWeekSpecificState({
+        weekStart: todayISO,
+        tasks: [],
+        groups: [],
+      });
+    } else {
+      // Just select it
+      setWeekStart(todayISO);
+    }
+  };
+
   return {
     weekState,
+    availableWeekStartsISO,
     actions: {
       addTask,
       addGroup,
@@ -587,6 +681,7 @@ export function useWeekState() {
       setTaskGoals,
       setTaskCompanions,
       setWeekStart,
+      createOrSelectCurrentWeek,
     },
   };
 }

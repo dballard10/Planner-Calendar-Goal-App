@@ -25,10 +25,10 @@ export const TASK_DELETE_BUTTON =
   "absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded transition-all duration-200 ease-out text-slate-400 hover:text-red-400 hover:bg-slate-800 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto";
 
 export const TASK_TYPE_GRADIENTS_TO_SLATE: Record<WeeklyItemType, string> = {
-  task: "bg-gradient-to-r from-emerald-700/70 to-slate-950",
-  event: "bg-gradient-to-r from-blue-700/70 to-slate-950",
-  birthday: "bg-gradient-to-r from-pink-700/70 to-slate-950",
-  holiday: "bg-gradient-to-r from-red-700/70 to-slate-950",
+  task: "bg-gradient-to-r from-emerald-800/50 to-slate-950",
+  event: "bg-gradient-to-r from-blue-800/50 to-slate-950",
+  birthday: "bg-gradient-to-r from-pink-800/50 to-slate-950",
+  holiday: "bg-gradient-to-r from-red-800/50 to-slate-950",
 };
 
 export function getTaskCardStyleClass(options: TaskCardStyleOptions = {}) {
@@ -59,7 +59,7 @@ export function getDynamicTaskCardGradientStyle(
   return {
     background: `linear-gradient(to right, ${hexToRgba(
       colorHex,
-      0.7
+      0.5
     )}, rgb(2, 6, 23))`,
   };
 }
