@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  IconTarget,
   IconChevronDown,
   IconCheck,
   IconX,
@@ -17,7 +16,6 @@ import {
   TASK_GOAL_PILL_REMOVE_ICON,
   TASK_GOAL_PILLS_WRAP,
   TASK_GOAL_SELECTOR,
-  TASK_GOAL_SELECTOR_LABEL,
   TASK_GOAL_TRIGGER,
   TASK_SELECTOR_SEARCH_ICON,
   TASK_SELECTOR_SEARCH_INPUT,
@@ -29,12 +27,14 @@ interface GoalMultiSelectProps {
   goals: Goal[];
   selectedGoalIds: string[];
   onChange: (goalIds: string[]) => void;
+  showSelectedPills?: boolean;
 }
 
 export function GoalMultiSelect({
   goals,
   selectedGoalIds,
   onChange,
+  showSelectedPills = true,
 }: GoalMultiSelectProps) {
   const [isGoalDropdownOpen, setIsGoalDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,11 +73,6 @@ export function GoalMultiSelect({
 
   return (
     <div className={TASK_GOAL_SELECTOR} ref={goalDropdownRef}>
-      <div className={TASK_GOAL_SELECTOR_LABEL}>
-        <IconTarget className="w-4 h-4" />
-        Linked Goal
-      </div>
-
       <div
         onClick={() => setIsGoalDropdownOpen(!isGoalDropdownOpen)}
         className={TASK_GOAL_TRIGGER}
@@ -142,30 +137,32 @@ export function GoalMultiSelect({
         </div>
       )}
 
-      <div className={TASK_GOAL_PILLS_WRAP}>
-        {selectedGoals.length > 0 &&
-          selectedGoals.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => handleToggleGoal(g.id)}
-              className={TASK_GOAL_PILL}
-              title={`Unlink ${g.name}`}
-            >
-              <div className="relative w-5 h-5">
-                <div
-                  className={TASK_GOAL_PILL_AVATAR_BORDER}
-                  style={{ backgroundColor: g.color ?? "#475569" }}
-                >
-                  <span className="text-[11px] leading-none">{g.emoji}</span>
+      {showSelectedPills && (
+        <div className={TASK_GOAL_PILLS_WRAP}>
+          {selectedGoals.length > 0 &&
+            selectedGoals.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => handleToggleGoal(g.id)}
+                className={TASK_GOAL_PILL}
+                title={`Unlink ${g.name}`}
+              >
+                <div className="relative w-5 h-5">
+                  <div
+                    className={TASK_GOAL_PILL_AVATAR_BORDER}
+                    style={{ backgroundColor: g.color ?? "#475569" }}
+                  >
+                    <span className="text-[11px] leading-none">{g.emoji}</span>
+                  </div>
+                  <div className={TASK_GOAL_PILL_REMOVE_ICON}>
+                    <IconX className="w-3.5 h-3.5 text-white" />
+                  </div>
                 </div>
-                <div className={TASK_GOAL_PILL_REMOVE_ICON}>
-                  <IconX className="w-3.5 h-3.5 text-white" />
-                </div>
-              </div>
-              <span>{g.name}</span>
-            </button>
-          ))}
-      </div>
+                <span>{g.name}</span>
+              </button>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

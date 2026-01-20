@@ -52,7 +52,6 @@ export function LinksEditor({ linksMarkdown, onChange }: LinksEditorProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="text-xs text-slate-400">Links</label>
       <div className="flex flex-col gap-2">
         <input
           type="text"

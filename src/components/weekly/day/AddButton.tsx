@@ -20,7 +20,7 @@ const AddButton = ({ onAddTaskClick, onAddGroupClick }: AddButtonProps) => {
 
       {/* Expandable Menu Container */}
       <div
-        className={`absolute right-0 flex items-center bg-slate-800 rounded-l-lg pr-8 pl-2 py-1 gap-2 transition-all duration-300 ease-out origin-right opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto`}
+        className={`absolute right-0 flex items-center bg-slate-800 rounded-lg border border-slate-700 shadow-xl pr-8 pl-2 py-1 gap-2 transition-all duration-300 ease-out origin-right opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto`}
       >
         {/* Add Task Button */}
         <button

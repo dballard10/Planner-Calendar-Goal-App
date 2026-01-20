@@ -21,6 +21,7 @@ interface GroupCardProps {
   onUpdateTaskStatus: (id: string, status: TaskStatus) => void;
   onUpdateTaskTitle: (id: string, title: string) => void;
   onDeleteTask: (id: string) => void;
+  onCopyTask?: (id: string) => void;
   onOpenDetailsSidePanel?: (taskId: string) => void;
   onOpenDetailsModal?: (taskId: string) => void;
   onOpenDetailsPage?: (taskId: string) => void;
@@ -184,6 +185,7 @@ export default function GroupCard({
                 onStatusChange={onUpdateTaskStatus}
                 onTitleChange={onUpdateTaskTitle}
                 onDelete={onDeleteTask}
+                onCopy={onCopyTask}
                 onOpenDetailsSidePanel={onOpenDetailsSidePanel}
                 onOpenDetailsModal={onOpenDetailsModal}
                 onOpenDetailsPage={onOpenDetailsPage}

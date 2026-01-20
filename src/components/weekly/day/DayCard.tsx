@@ -38,12 +38,18 @@ interface DayCardProps {
   onAddGroup: (dayIndex: number) => void;
   onAddTaskToGroup: (dayIndex: number, groupId: string, title: string) => void;
   onDeleteTask: (id: string) => void;
+  onCopyTask?: (id: string) => void;
   onUpdateGroupTitle: (groupId: string, title: string) => void;
   onDeleteGroup: (groupId: string) => void;
   onOpenDetailsSidePanel?: (taskId: string) => void;
   onOpenDetailsModal?: (taskId: string) => void;
   onOpenDetailsPage?: (taskId: string) => void;
   highlightTaskId?: string | null;
+  // Day clipboard actions
+  onCopyDay: (dayIndex: number) => void;
+  onPasteDay: (dayIndex: number) => void;
+  canPaste: boolean;
+  onDeleteAllForDay: (dayIndex: number) => void;
 }
 
 export default function DayCard({
@@ -59,19 +65,24 @@ export default function DayCard({
   onAddGroup,
   onAddTaskToGroup,
   onDeleteTask,
+  onCopyTask,
   onUpdateGroupTitle,
   onDeleteGroup,
   onOpenDetailsSidePanel,
   onOpenDetailsModal,
   onOpenDetailsPage,
   highlightTaskId,
+  onCopyDay,
+  onPasteDay,
+  canPaste,
+  onDeleteAllForDay,
 }: DayCardProps) {
   // Collapse if no root tasks AND no groups
   const isEmpty = tasks.length === 0 && groups.length === 0;
   const [isCollapsed, setIsCollapsed] = useState(isEmpty);
 
   // Per-day filter state
-  const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
+  const [taskFilters, setTaskFilters] = useState<TaskFilter>([]);
 
   // Per-day sort state
   const [sortMode, setSortMode] = useState<DaySortMode>("position");
@@ -82,12 +93,6 @@ export default function DayCard({
       let result = 0;
 
       switch (sortMode) {
-        case "titleAsc": {
-          const titleA = a.title.trim().toLocaleLowerCase();
-          const titleB = b.title.trim().toLocaleLowerCase();
-          result = titleA.localeCompare(titleB);
-          break;
-        }
         case "type": {
           const rankA = ITEM_TYPE_PRIORITIES.indexOf(a.type);
           const rankB = ITEM_TYPE_PRIORITIES.indexOf(b.type);
@@ -96,11 +101,6 @@ export default function DayCard({
         }
         case "status": {
           result = STATUS_RANK[a.status] - STATUS_RANK[b.status];
-          break;
-        }
-        case "createdAt": {
-          result =
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
         }
         case "position":
@@ -138,10 +138,10 @@ export default function DayCard({
   // Apply task filter before splitting into root/group tasks
   const visibleTasks = useMemo(
     () =>
-      taskFilter === "all"
+      taskFilters.length === 0
         ? tasks
-        : tasks.filter((t) => t.status === taskFilter),
-    [tasks, taskFilter]
+        : tasks.filter((t) => taskFilters.includes(t.status)),
+    [tasks, taskFilters]
   );
 
   // Separate root tasks from group tasks and apply sorting
@@ -170,15 +170,21 @@ export default function DayCard({
     <div className="flex flex-col bg-slate-1000 rounded-lg border border-slate-700 max-w-5xl transition-all duration-300 ease-in-out">
       <div
         className={`grid grid-cols-3 items-center gap-2 p-2 bg-slate-800 border-slate-700 z-10 relative ${
-          isCollapsed ? "rounded-lg" : "rounded-t-lg border-b"
+          isCollapsed ? "rounded-lg" : "rounded-t-lg border-b-2 border-slate-700/80"
         }`}
       >
         <div className="flex justify-start">
           <DayCardSettings
-            taskFilter={taskFilter}
-            onTaskFilterChange={setTaskFilter}
+            taskFilters={taskFilters}
+            onTaskFiltersChange={setTaskFilters}
             sortMode={sortMode}
             onSortModeChange={setSortMode}
+            isCollapsed={isCollapsed}
+            onToggleCollapsed={() => setIsCollapsed(!isCollapsed)}
+            onCopyDay={() => onCopyDay(dayIndex)}
+            onPasteDay={() => onPasteDay(dayIndex)}
+            canPaste={canPaste}
+            onDeleteAll={() => onDeleteAllForDay(dayIndex)}
           />
         </div>
         <div className="flex justify-center">
@@ -256,6 +262,7 @@ export default function DayCard({
                 onStatusChange={onUpdateTaskStatus}
                 onTitleChange={onUpdateTaskTitle}
                 onDelete={onDeleteTask}
+                onCopy={onCopyTask}
                 onOpenDetailsSidePanel={onOpenDetailsSidePanel}
                 onOpenDetailsModal={onOpenDetailsModal}
                 onOpenDetailsPage={onOpenDetailsPage}

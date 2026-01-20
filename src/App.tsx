@@ -54,6 +54,7 @@ function App() {
             setActiveTab("weekly");
           }}
           onCreateCurrentWeek={actions.createOrSelectCurrentWeek}
+          onCreateWeekForDate={actions.createOrSelectWeekForDate}
         />
       )}
       {activeTab === "calendar" && <CalendarView events={calendarEvents} />}

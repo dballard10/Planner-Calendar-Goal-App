@@ -225,6 +225,7 @@ export default function SegmentedDateInput({
       ref={inputRef}
       type="text"
       value={displayValue}
+      onChange={() => {}} // Handled by onKeyDown
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
       onBlur={handleBlur}

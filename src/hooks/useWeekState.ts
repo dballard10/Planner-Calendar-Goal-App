@@ -8,10 +8,18 @@ import type {
   WeeklyItemType,
   Goal,
   Companion,
+  RecurrenceRule,
+  RecurrenceException,
 } from "../types/weekly";
 import { GOAL_ACCENT_COLORS } from "../components/goals/goalStyles";
 import { parseWeeklyMarkdown } from "../lib/markdown/tasks";
 import { mockWeekMarkdownByStartISO, availableMockWeekStartsISO } from "../mock/weeks";
+import { applyRecurrencesToWeek } from "../lib/weekly/recurrence";
+import type { DayClipboard } from "../lib/weekly/dayClipboard";
+import {
+  getMaxRootTaskPosition,
+  getMaxGroupPosition,
+} from "../lib/weekly/dayClipboard";
 
 const LOCAL_STORAGE_KEY = "weekly_user_data_v1";
 
@@ -24,17 +32,23 @@ interface UserDataStore {
   weeks: Record<string, UserWeekData>;
   companions: Companion[];
   goals: Goal[];
+  recurrences: Record<string, RecurrenceRule>;
+  recurrenceExceptions: Record<string, RecurrenceException>;
+}
+
+// Helper to get the Sunday for a given date
+export function getSundayForDate(date: Date): Date {
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+  const sunday = new Date(date);
+  sunday.setDate(date.getDate() - daysToSubtract);
+  sunday.setHours(0, 0, 0, 0);
+  return sunday;
 }
 
 // Helper to get the most recent Sunday
 export function getMostRecentSunday(): Date {
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
-  const sunday = new Date(today);
-  sunday.setDate(today.getDate() - daysToSubtract);
-  sunday.setHours(0, 0, 0, 0);
-  return sunday;
+  return getSundayForDate(new Date());
 }
 
 // Helper to format date as ISO string (YYYY-MM-DD)
@@ -294,40 +308,53 @@ function createMockData(weekStart: string): {
 
 function loadWeekStateForStart(
   weekStart: string,
-  userWeeks?: Record<string, UserWeekData>
+  userWeeks?: Record<string, UserWeekData>,
+  recurrences: Record<string, RecurrenceRule> = {},
+  exceptions: Record<string, RecurrenceException> = {}
 ): WeekState {
+  let state: WeekState;
+
   // 1. Check user storage
   if (userWeeks && userWeeks[weekStart]) {
     const fallback = createMockData(weekStart);
-    return {
+    state = {
       weekStart,
       tasks: userWeeks[weekStart].tasks,
       groups: userWeeks[weekStart].groups,
       goals: fallback.goals,
       companions: fallback.companions,
     };
+  } else {
+    // 2. Check mock markdown
+    const markdown = mockWeekMarkdownByStartISO[weekStart];
+    const fallback = createMockData(weekStart);
+
+    if (!markdown) {
+      state = {
+        weekStart,
+        ...fallback,
+      };
+    } else {
+      const parsed = parseWeeklyMarkdown(markdown);
+      state = {
+        weekStart,
+        tasks: parsed.tasks,
+        groups: parsed.groups,
+        goals: fallback.goals,
+        companions: fallback.companions,
+      };
+    }
   }
 
-  // 2. Check mock markdown
-  const markdown = mockWeekMarkdownByStartISO[weekStart];
-  const fallback = createMockData(weekStart);
-
-  if (!markdown) {
-    return {
-      weekStart,
-      ...fallback,
-    };
-  }
-
-  const parsed = parseWeeklyMarkdown(markdown);
-
-  return {
+  // Apply recurrences to the loaded state
+  state.tasks = applyRecurrencesToWeek(
     weekStart,
-    tasks: parsed.tasks,
-    groups: parsed.groups,
-    goals: fallback.goals,
-    companions: fallback.companions,
-  };
+    state.tasks,
+    recurrences,
+    exceptions
+  );
+
+  return state;
 }
 
 export function useWeekState() {
@@ -335,27 +362,51 @@ export function useWeekState() {
 
   // Initialize once from localStorage
   const [dataStore, setDataStore] = useState<UserDataStore>(() => {
-    if (typeof window === "undefined") return { weeks: {}, companions: [], goals: [] };
+    const defaultStore: UserDataStore = {
+      weeks: {},
+      companions: [],
+      goals: [],
+      recurrences: {},
+      recurrenceExceptions: {},
+    };
+    if (typeof window === "undefined") return defaultStore;
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          ...defaultStore,
+          ...parsed,
+        };
       } catch (e) {
         console.error("Failed to parse weekly user data", e);
       }
     }
-    return { weeks: {}, companions: [], goals: [] };
+    return defaultStore;
   });
 
-  const initialState = loadWeekStateForStart(initialWeekStartISO, dataStore.weeks);
+  const initialState = loadWeekStateForStart(
+    initialWeekStartISO,
+    dataStore.weeks,
+    dataStore.recurrences,
+    dataStore.recurrenceExceptions
+  );
 
   // Global profiles (persist across week changes)
   const [companions, setCompanions] = useState<Companion[]>(
-    dataStore.companions.length > 0 ? dataStore.companions : initialState.companions
+    dataStore.companions.length > 0
+      ? dataStore.companions
+      : initialState.companions
   );
   const [goals, setGoals] = useState<Goal[]>(
     dataStore.goals.length > 0 ? dataStore.goals : initialState.goals
   );
+  const [recurrences, setRecurrences] = useState<Record<string, RecurrenceRule>>(
+    dataStore.recurrences
+  );
+  const [recurrenceExceptions, setRecurrenceExceptions] = useState<
+    Record<string, RecurrenceException>
+  >(dataStore.recurrenceExceptions);
 
   // Week-specific data
   const [weekSpecificState, setWeekSpecificState] = useState<{
@@ -382,11 +433,13 @@ export function useWeekState() {
         },
         companions,
         goals,
+        recurrences,
+        recurrenceExceptions,
       };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedStore));
       return updatedStore;
     });
-  }, [weekSpecificState, companions, goals]);
+  }, [weekSpecificState, companions, goals, recurrences, recurrenceExceptions]);
 
   // Combine for backwards compatibility
   const weekState: WeekState = {
@@ -491,6 +544,15 @@ export function useWeekState() {
       ...prev,
       tasks: prev.tasks.map((task) =>
         task.id === id ? { ...task, linksMarkdown } : task
+      ),
+    }));
+  };
+
+  const updateTaskNotes = (id: string, notesMarkdown?: string) => {
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((task) =>
+        task.id === id ? { ...task, notesMarkdown } : task
       ),
     }));
   };
@@ -625,9 +687,31 @@ export function useWeekState() {
       ),
     }));
   };
+  
+  const updateTaskSchedule = (
+    taskId: string,
+    schedule: {
+      startDate?: string;
+      endDate?: string;
+      startTime?: string;
+      endTime?: string;
+    }
+  ) => {
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.id === taskId ? { ...t, ...schedule } : t
+      ),
+    }));
+  };
 
   const setWeekStart = (weekStartISO: string) => {
-    const newWeekData = loadWeekStateForStart(weekStartISO, dataStore.weeks);
+    const newWeekData = loadWeekStateForStart(
+      weekStartISO,
+      dataStore.weeks,
+      recurrences,
+      recurrenceExceptions
+    );
     // Only update week-specific data, preserve global profiles
     setWeekSpecificState({
       weekStart: newWeekData.weekStart,
@@ -655,6 +739,335 @@ export function useWeekState() {
     }
   };
 
+  // --- RECURRENCE ACTIONS ---
+  const createOrUpdateRecurrenceFromTask = (
+    taskId: string,
+    ruleDraft: Omit<
+      RecurrenceRule,
+      | "id"
+      | "title"
+      | "type"
+      | "goalIds"
+      | "companionIds"
+      | "linksMarkdown"
+      | "location"
+      | "groupId"
+    >
+  ) => {
+    const task = weekState.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const recurrenceId = task.recurrenceId || generateId();
+    const rule: RecurrenceRule = {
+      ...ruleDraft,
+      id: recurrenceId,
+      title: task.title,
+      type: task.type,
+      goalIds: task.goalIds,
+      companionIds: task.companionIds,
+      linksMarkdown: task.linksMarkdown,
+      location: task.location,
+      notesMarkdown: task.notesMarkdown,
+      groupId: task.groupId,
+    };
+
+    setRecurrences((prev) => ({ ...prev, [recurrenceId]: rule }));
+
+    // Link current task to the recurrence
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              recurrenceId,
+              occurrenceDateISO: t.occurrenceDateISO || rule.startDateISO,
+            }
+          : t
+      ),
+    }));
+  };
+
+  const deleteRecurrenceSeries = (recurrenceId: string) => {
+    setRecurrences((prev) => {
+      const next = { ...prev };
+      delete next[recurrenceId];
+      return next;
+    });
+    setRecurrenceExceptions((prev) => {
+      const next = { ...prev };
+      delete next[recurrenceId];
+      return next;
+    });
+
+    // Clean up occurrences in all weeks
+    setDataStore((prev) => {
+      const nextWeeks = { ...prev.weeks };
+      Object.keys(nextWeeks).forEach((weekISO) => {
+        nextWeeks[weekISO] = {
+          ...nextWeeks[weekISO],
+          tasks: nextWeeks[weekISO].tasks.filter(
+            (t) => t.recurrenceId !== recurrenceId
+          ),
+        };
+      });
+      return { ...prev, weeks: nextWeeks };
+    });
+
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.recurrenceId !== recurrenceId),
+    }));
+  };
+
+  const deleteTaskOccurrence = (taskId: string) => {
+    const task = weekState.tasks.find((t) => t.id === taskId);
+    if (!task || !task.recurrenceId || !task.occurrenceDateISO) {
+      deleteTask(taskId);
+      return;
+    }
+
+    const { recurrenceId, occurrenceDateISO } = task;
+
+    setRecurrenceExceptions((prev) => {
+      const current = prev[recurrenceId] || { skipDatesISO: [] };
+      return {
+        ...prev,
+        [recurrenceId]: {
+          ...current,
+          skipDatesISO: [...current.skipDatesISO, occurrenceDateISO],
+        },
+      };
+    });
+
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.id !== taskId),
+    }));
+  };
+
+  // --- DAY BULK ACTIONS ---
+  const deleteAllForDay = (dayIndex: number) => {
+    // 1. Identify recurring occurrences in this day
+    const recurringTasks = weekSpecificState.tasks.filter(
+      (t) =>
+        t.dayIndex === dayIndex && t.recurrenceId && t.occurrenceDateISO
+    );
+
+    // 2. Add skip-date exceptions so they don't regenerate on reload
+    if (recurringTasks.length > 0) {
+      setRecurrenceExceptions((prev) => {
+        const next = { ...prev };
+        recurringTasks.forEach((t) => {
+          if (!t.recurrenceId || !t.occurrenceDateISO) return;
+          const current = next[t.recurrenceId] || { skipDatesISO: [] };
+          if (!current.skipDatesISO.includes(t.occurrenceDateISO)) {
+            next[t.recurrenceId] = {
+              ...current,
+              skipDatesISO: [...current.skipDatesISO, t.occurrenceDateISO],
+            };
+          }
+        });
+        return next;
+      });
+    }
+
+    // 3. Remove all tasks and groups for this day
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.dayIndex !== dayIndex),
+      groups: prev.groups.filter((g) => g.dayIndex !== dayIndex),
+    }));
+  };
+
+  const pasteDayFromClipboard = (
+    dayIndex: number,
+    clipboard: DayClipboard
+  ) => {
+    if (!clipboard || (clipboard.tasks.length === 0 && clipboard.groups.length === 0)) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    // Compute starting positions for new groups
+    const existingMaxGroupPos = getMaxGroupPosition(weekSpecificState.groups, dayIndex);
+
+    // Create new groups and build a map from clipboard groupIndex to new groupId
+    const groupIndexToNewId = new Map<number, string>();
+    const newGroups: Group[] = clipboard.groups.map((cg, idx) => {
+      const newId = generateId();
+      groupIndexToNewId.set(idx, newId);
+      return {
+        id: newId,
+        title: cg.title,
+        dayIndex,
+        position: existingMaxGroupPos + 1 + idx,
+        createdAt: now,
+      };
+    });
+
+    // Compute starting position for root tasks
+    const existingMaxRootPos = getMaxRootTaskPosition(weekSpecificState.tasks, dayIndex);
+
+    // Track positions per group for group tasks
+    const groupTaskPositionMap = new Map<string, number>();
+    newGroups.forEach((g) => {
+      groupTaskPositionMap.set(g.id, -1);
+    });
+
+    // Separate clipboard tasks into root vs group tasks
+    const rootClipboardTasks = clipboard.tasks.filter(
+      (ct) => ct.groupIndex === undefined
+    );
+    const groupClipboardTasks = clipboard.tasks.filter(
+      (ct) => ct.groupIndex !== undefined
+    );
+
+    // Create root tasks
+    const newRootTasks: Task[] = rootClipboardTasks.map((ct, idx) => ({
+      id: generateId(),
+      type: ct.type,
+      title: ct.title,
+      status: "open" as const,
+      dayIndex,
+      position: existingMaxRootPos + 1 + idx,
+      createdAt: now,
+      goalIds: ct.goalIds,
+      companionIds: ct.companionIds,
+      linksMarkdown: ct.linksMarkdown,
+      location: ct.location,
+      notesMarkdown: ct.notesMarkdown,
+      startDate: ct.startDate,
+      endDate: ct.endDate,
+      startTime: ct.startTime,
+      endTime: ct.endTime,
+    }));
+
+    // Create group tasks
+    const newGroupTasks: Task[] = groupClipboardTasks.map((ct) => {
+      const newGroupId = groupIndexToNewId.get(ct.groupIndex!);
+      if (!newGroupId) {
+        // Fallback to root task if group mapping fails
+        return {
+          id: generateId(),
+          type: ct.type,
+          title: ct.title,
+          status: "open" as const,
+          dayIndex,
+          position: existingMaxRootPos + 1 + rootClipboardTasks.length,
+          createdAt: now,
+          goalIds: ct.goalIds,
+          companionIds: ct.companionIds,
+          linksMarkdown: ct.linksMarkdown,
+          location: ct.location,
+          startDate: ct.startDate,
+          endDate: ct.endDate,
+          startTime: ct.startTime,
+          endTime: ct.endTime,
+        };
+      }
+
+      // Get next position for this group
+      const currentPos = groupTaskPositionMap.get(newGroupId) ?? -1;
+      const nextPos = currentPos + 1;
+      groupTaskPositionMap.set(newGroupId, nextPos);
+
+      return {
+        id: generateId(),
+        type: ct.type,
+        title: ct.title,
+        status: "open" as const,
+        dayIndex,
+        position: nextPos,
+        createdAt: now,
+        groupId: newGroupId,
+        goalIds: ct.goalIds,
+        companionIds: ct.companionIds,
+        linksMarkdown: ct.linksMarkdown,
+        location: ct.location,
+        notesMarkdown: ct.notesMarkdown,
+        startDate: ct.startDate,
+        endDate: ct.endDate,
+        startTime: ct.startTime,
+        endTime: ct.endTime,
+      };
+    });
+
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      groups: [...prev.groups, ...newGroups],
+      tasks: [...prev.tasks, ...newRootTasks, ...newGroupTasks],
+    }));
+  };
+
+  const addTaskFromClipboard = (
+    dayIndex: number,
+    ct: ClipboardTask
+  ) => {
+    const now = new Date().toISOString();
+    const existingMaxRootPos = getMaxRootTaskPosition(
+      weekSpecificState.tasks,
+      dayIndex
+    );
+
+    const newTask: Task = {
+      id: generateId(),
+      type: ct.type,
+      title: ct.title,
+      status: "open" as const,
+      dayIndex,
+      position: existingMaxRootPos + 1,
+      createdAt: now,
+      goalIds: ct.goalIds,
+      companionIds: ct.companionIds,
+      linksMarkdown: ct.linksMarkdown,
+      location: ct.location,
+      notesMarkdown: ct.notesMarkdown,
+      startDate: ct.startDate,
+      endDate: ct.endDate,
+      startTime: ct.startTime,
+      endTime: ct.endTime,
+    };
+
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: [...prev.tasks, newTask],
+    }));
+  };
+
+  const clearCurrentWeek = () => {
+    // 1. Identify all recurring occurrences in the current week
+    const recurringTasks = weekSpecificState.tasks.filter(
+      (t) => t.recurrenceId && t.occurrenceDateISO
+    );
+
+    // 2. Add exceptions for all of them so they don't regenerate
+    if (recurringTasks.length > 0) {
+      setRecurrenceExceptions((prev) => {
+        const next = { ...prev };
+        recurringTasks.forEach((t) => {
+          if (!t.recurrenceId || !t.occurrenceDateISO) return;
+          const current = next[t.recurrenceId] || { skipDatesISO: [] };
+          if (!current.skipDatesISO.includes(t.occurrenceDateISO)) {
+            next[t.recurrenceId] = {
+              ...current,
+              skipDatesISO: [...current.skipDatesISO, t.occurrenceDateISO],
+            };
+          }
+        });
+        return next;
+      });
+    }
+
+    // 3. Clear tasks and groups for this week
+    setWeekSpecificState((prev) => ({
+      ...prev,
+      tasks: [],
+      groups: [],
+    }));
+  };
+
   return {
     weekState,
     availableWeekStartsISO,
@@ -665,10 +1078,15 @@ export function useWeekState() {
       updateTaskTitle,
       updateTaskType,
       updateTaskLinks,
+      updateTaskNotes,
       updateTaskLocation,
       deleteTask,
       updateGroupTitle,
       deleteGroup,
+      deleteAllForDay,
+      pasteDayFromClipboard,
+      addTaskFromClipboard,
+      clearCurrentWeek,
       // Goal Actions
       addGoal,
       updateGoal,
@@ -680,8 +1098,35 @@ export function useWeekState() {
       // Linking Actions
       setTaskGoals,
       setTaskCompanions,
+      updateTaskSchedule,
       setWeekStart,
       createOrSelectCurrentWeek,
+      createOrSelectWeekForDate: (dateISO: string) => {
+        const date = new Date(dateISO + "T00:00:00");
+        const sunday = getSundayForDate(date);
+        const weekStartISO = formatDateISO(sunday);
+
+        // Check if it already exists in user store or mock data
+        const exists =
+          dataStore.weeks[weekStartISO] ||
+          mockWeekMarkdownByStartISO[weekStartISO];
+
+        if (!exists) {
+          // Create empty entry in user store
+          setWeekSpecificState({
+            weekStart: weekStartISO,
+            tasks: [],
+            groups: [],
+          });
+        } else {
+          // Just select it
+          setWeekStart(weekStartISO);
+        }
+      },
+      // Recurrence Actions
+      createOrUpdateRecurrenceFromTask,
+      deleteRecurrenceSeries,
+      deleteTaskOccurrence,
     },
   };
 }

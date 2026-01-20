@@ -8,7 +8,6 @@ import {
 import type { Companion } from "../../../types/weekly";
 import {
   TASK_COMPANION_DROPDOWN,
-  TASK_COMPANION_LABEL,
   TASK_COMPANION_PILL,
   TASK_COMPANION_PILL_ICON,
   TASK_COMPANION_SELECTED_LIST,
@@ -28,12 +27,14 @@ interface CompanionSelectorProps {
   companions: Companion[];
   selectedIds: string[];
   onChange: (companionIds: string[]) => void;
+  showSelectedPills?: boolean;
 }
 
 export function CompanionSelector({
   companions,
   selectedIds,
   onChange,
+  showSelectedPills = true,
 }: CompanionSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAllCompanions, setShowAllCompanions] = useState(false);
@@ -84,11 +85,6 @@ export function CompanionSelector({
 
   return (
     <div className={TASK_COMPANION_SELECTOR} ref={companionDropdownRef}>
-      <div className={TASK_COMPANION_LABEL}>
-        <IconUsers className="w-4 h-4" />
-        Companions
-      </div>
-
       <div
         onClick={() => setIsCompanionDropdownOpen(!isCompanionDropdownOpen)}
         className={TASK_COMPANION_TRIGGER}
@@ -150,46 +146,48 @@ export function CompanionSelector({
         </div>
       )}
 
-      <div className={TASK_COMPANION_SELECTED_LIST}>
-        {selectedCompanions.length > 0 && (
-          <>
-            {selectedCompanions
-              .slice(0, showAllCompanions ? undefined : 5)
-              .map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => handleToggleCompanion(c.id)}
-                  className={TASK_COMPANION_PILL}
-                  title={`Remove ${c.name}`}
-                >
-                  <div className="relative w-4 h-4 flex items-center justify-center">
-                    <Avatar
-                      content={getInitials(c.name)}
-                      bgColor={c.color || "#64748b"}
-                      size={16}
-                      className="absolute inset-0 transition-opacity group-hover:opacity-0"
-                    />
-                    <div className={TASK_COMPANION_PILL_ICON}>
-                      <IconX className="w-3.5 h-3.5" />
+      {showSelectedPills && (
+        <div className={TASK_COMPANION_SELECTED_LIST}>
+          {selectedCompanions.length > 0 && (
+            <>
+              {selectedCompanions
+                .slice(0, showAllCompanions ? undefined : 5)
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleToggleCompanion(c.id)}
+                    className={TASK_COMPANION_PILL}
+                    title={`Remove ${c.name}`}
+                  >
+                    <div className="relative w-4 h-4 flex items-center justify-center">
+                      <Avatar
+                        content={getInitials(c.name)}
+                        bgColor={c.color || "#64748b"}
+                        size={16}
+                        className="absolute inset-0 transition-opacity group-hover:opacity-0"
+                      />
+                      <div className={TASK_COMPANION_PILL_ICON}>
+                        <IconX className="w-3.5 h-3.5" />
+                      </div>
                     </div>
-                  </div>
-                  <span>{c.name}</span>
-                </button>
-              ))}
+                    <span>{c.name}</span>
+                  </button>
+                ))}
 
-            {selectedCompanions.length > 5 && (
-              <button
-                onClick={() => setShowAllCompanions(!showAllCompanions)}
-                className={TASK_COMPANION_SHOW_MORE_BUTTON}
-              >
-                {showAllCompanions
-                  ? "Show Less"
-                  : `+${selectedCompanions.length - 5} more`}
-              </button>
-            )}
-          </>
-        )}
-      </div>
+              {selectedCompanions.length > 5 && (
+                <button
+                  onClick={() => setShowAllCompanions(!showAllCompanions)}
+                  className={TASK_COMPANION_SHOW_MORE_BUTTON}
+                >
+                  {showAllCompanions
+                    ? "Show Less"
+                    : `+${selectedCompanions.length - 5} more`}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

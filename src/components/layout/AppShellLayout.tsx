@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { LeftSidebar } from "./LeftSidebar";
+import { TopNotificationHost } from "../ui/TopNotificationHost";
 
 interface AppShellLayoutProps {
   children: React.ReactNode;
@@ -24,6 +25,7 @@ export function AppShellLayout({
         } as React.CSSProperties
       }
     >
+      <TopNotificationHost />
       {/* Left Sidebar */}
       <LeftSidebar
         isOpen={isSidebarOpen}

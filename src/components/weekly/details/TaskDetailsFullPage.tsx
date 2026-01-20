@@ -6,6 +6,7 @@ import type {
   WeeklyItemType,
   Goal,
   Companion,
+  RecurrenceRule,
 } from "../../../types/weekly";
 import TaskDetailsContent from "./TaskDetailsContent";
 import {
@@ -19,6 +20,7 @@ interface TaskDetailsFullPageProps {
   task: Task;
   goals: Goal[];
   companions: Companion[];
+  recurrences?: Record<string, RecurrenceRule>;
   onBack: () => void;
   onStatusChange?: (status: TaskStatus) => void;
   onTitleChange?: (title: string) => void;
@@ -26,7 +28,27 @@ interface TaskDetailsFullPageProps {
   onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
+  onNotesChange?: (notesMarkdown?: string) => void;
   onLocationChange?: (location?: TaskLocation) => void;
+  onScheduleChange?: (schedule: {
+    startDate?: string;
+    endDate?: string;
+    startTime?: string;
+    endTime?: string;
+  }) => void;
+  onRecurrenceChange?: (
+    rule: Omit<
+      RecurrenceRule,
+      | "id"
+      | "title"
+      | "type"
+      | "goalIds"
+      | "companionIds"
+      | "linksMarkdown"
+      | "location"
+      | "groupId"
+    > | null
+  ) => void;
   onDelete?: () => void;
 }
 
@@ -34,6 +56,7 @@ export default function TaskDetailsFullPage({
   task,
   goals,
   companions,
+  recurrences,
   onBack,
   onStatusChange,
   onTitleChange,
@@ -42,6 +65,8 @@ export default function TaskDetailsFullPage({
   onCompanionsChange,
   onLinksChange,
   onLocationChange,
+  onScheduleChange,
+  onRecurrenceChange,
   onDelete,
 }: TaskDetailsFullPageProps) {
   return (
@@ -59,13 +84,17 @@ export default function TaskDetailsFullPage({
             task={task}
             goals={goals}
             companions={companions}
+            recurrences={recurrences}
             onStatusChange={onStatusChange}
             onTitleChange={onTitleChange}
             onTypeChange={onTypeChange}
             onGoalsChange={onGoalsChange}
             onCompanionsChange={onCompanionsChange}
             onLinksChange={onLinksChange}
+            onNotesChange={onNotesChange}
             onLocationChange={onLocationChange}
+            onScheduleChange={onScheduleChange}
+            onRecurrenceChange={onRecurrenceChange}
             onDelete={onDelete}
           />
         </div>

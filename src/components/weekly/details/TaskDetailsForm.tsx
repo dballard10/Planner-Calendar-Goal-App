@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import type { ReactNode } from "react";
 import {
   IconClock,
   IconMapPin,
@@ -8,8 +9,13 @@ import {
   IconLoader2,
 } from "@tabler/icons-react";
 import { LinksEditor } from "./LinksEditor";
-import SegmentedDateInput from "../../ui/SegmentedDateInput";
-import type { TaskLocation } from "../../../types/weekly";
+import { TASK_SECTION_DIVIDER } from "../styles";
+import DateInputWithPicker from "../../ui/DateInputWithPicker";
+import TimeInputWithPicker from "../../ui/TimeInputWithPicker";
+import { RecurrenceSelector } from "./RecurrenceSelector";
+import { getScheduleEndErrors } from "../utils/date";
+import type { ScheduleValues } from "../utils/date";
+import type { TaskLocation, RecurrenceFrequency } from "../../../types/weekly";
 import {
   searchPlaces,
   suggestionToTaskLocation,
@@ -23,23 +29,27 @@ interface TaskDetailsFormValues {
   endDate?: string;
   startTime?: string;
   endTime?: string;
-  description?: string;
+  notesMarkdown?: string;
   location?: TaskLocation;
   people?: string;
   goals?: string;
   linksMarkdown?: string;
+  recurrenceFrequency?: RecurrenceFrequency | "none";
+  recurrenceInterval?: number;
 }
 
 interface TaskDetailsFormProps {
   initialValues?: TaskDetailsFormValues;
   onChange?: (values: TaskDetailsFormValues) => void;
   onLocationChange?: (location?: TaskLocation) => void;
+  renderLinking?: () => ReactNode;
 }
 
 export default function TaskDetailsForm({
   initialValues,
   onChange,
   onLocationChange,
+  renderLinking,
 }: TaskDetailsFormProps) {
   const settings = useAppSettings();
 
@@ -48,16 +58,34 @@ export default function TaskDetailsForm({
   const [endDate, setEndDate] = useState(initialValues?.endDate || "");
   const [startTime, setStartTime] = useState(initialValues?.startTime || "");
   const [endTime, setEndTime] = useState(initialValues?.endTime || "");
-  const [description, setDescription] = useState(
-    initialValues?.description || ""
+  const [notesMarkdown, setNotesMarkdown] = useState(
+    initialValues?.notesMarkdown || ""
   );
   const [people, setPeople] = useState(initialValues?.people || "");
   const [goals, setGoals] = useState(initialValues?.goals || "");
   const [linksMarkdown, setLinksMarkdown] = useState(
     initialValues?.linksMarkdown || ""
   );
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<
+    RecurrenceFrequency | "none"
+  >(initialValues?.recurrenceFrequency || "none");
+  const [recurrenceInterval, setRecurrenceInterval] = useState<number>(
+    initialValues?.recurrenceInterval || 1
+  );
 
-  // Location autocomplete state
+  // Schedule error state
+  const [endDateError, setEndDateError] = useState(false);
+  const [endTimeError, setEndTimeError] = useState(false);
+
+  // Track last valid schedule for propagation
+  const lastValidScheduleRef = useRef<ScheduleValues>({
+    startDate: initialValues?.startDate,
+    endDate: initialValues?.endDate,
+    startTime: initialValues?.startTime,
+    endTime: initialValues?.endTime,
+  });
+
+  // Location state
   const [locationData, setLocationData] = useState<TaskLocation | undefined>(
     initialValues?.location
   );
@@ -65,87 +93,126 @@ export default function TaskDetailsForm({
     initialValues?.location?.label || ""
   );
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
-  const [highlightIndex, setHighlightIndex] = useState(-1);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const [userPosition, setUserPosition] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
 
+  // Refs
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<number | null>(null);
   const locationInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setStartDate(initialValues?.startDate || "");
-    setEndDate(initialValues?.endDate || "");
-    setStartTime(initialValues?.startTime || "");
-    setEndTime(initialValues?.endTime || "");
-    setDescription(initialValues?.description || "");
-    setPeople(initialValues?.people || "");
-    setGoals(initialValues?.goals || "");
-    setLinksMarkdown(initialValues?.linksMarkdown || "");
-    setLocationData(initialValues?.location);
-    setLocationQuery(initialValues?.location?.label || "");
-  }, [
-    initialValues?.description,
-    initialValues?.endDate,
-    initialValues?.endTime,
-    initialValues?.goals,
-    initialValues?.linksMarkdown,
-    initialValues?.location,
-    initialValues?.people,
-    initialValues?.startDate,
-    initialValues?.startTime,
-  ]);
 
   // Helper to handle changes and notify parent if needed
-  const handleChange = (field: string, value: string) => {
-    // Update local state based on field
-    switch (field) {
-      case "startDate":
-        setStartDate(value);
-        break;
-      case "endDate":
-        setEndDate(value);
-        break;
-      case "startTime":
-        setStartTime(value);
-        break;
-      case "endTime":
-        setEndTime(value);
-        break;
-      case "description":
-        setDescription(value);
-        break;
-      case "people":
-        setPeople(value);
-        break;
-      case "goals":
-        setGoals(value);
-        break;
-      case "linksMarkdown":
-        setLinksMarkdown(value);
-        break;
-    }
+  const handleChange = useCallback(
+    (field: string, value: string) => {
+      let nextStartDate = startDate;
+      let nextEndDate = endDate;
+      let nextStartTime = startTime;
+      let nextEndTime = endTime;
 
-    // Notify parent
-    if (onChange) {
-      onChange({
-        startDate: field === "startDate" ? value : startDate,
-        endDate: field === "endDate" ? value : endDate,
-        startTime: field === "startTime" ? value : startTime,
-        endTime: field === "endTime" ? value : endTime,
-        description: field === "description" ? value : description,
-        location: locationData,
-        people: field === "people" ? value : people,
-        goals: field === "goals" ? value : goals,
-        linksMarkdown: field === "linksMarkdown" ? value : linksMarkdown,
-      });
-    }
-  };
+      // Update local state based on field
+      switch (field) {
+        case "startDate":
+          setStartDate(value);
+          nextStartDate = value;
+          break;
+        case "endDate":
+          setEndDate(value);
+          nextEndDate = value;
+          break;
+        case "startTime":
+          setStartTime(value);
+          nextStartTime = value;
+          break;
+        case "endTime":
+          setEndTime(value);
+          nextEndTime = value;
+          break;
+        case "notesMarkdown":
+          setNotesMarkdown(value);
+          break;
+        case "people":
+          setPeople(value);
+          break;
+        case "goals":
+          setGoals(value);
+          break;
+        case "linksMarkdown":
+          setLinksMarkdown(value);
+          break;
+        case "recurrenceFrequency":
+          setRecurrenceFrequency(value as RecurrenceFrequency | "none");
+          break;
+        case "recurrenceInterval":
+          setRecurrenceInterval(typeof value === "string" ? parseInt(value) || 1 : value);
+          break;
+      }
+
+      // Recompute validity
+      const currentSchedule: ScheduleValues = {
+        startDate: nextStartDate,
+        endDate: nextEndDate,
+        startTime: nextStartTime,
+        endTime: nextEndTime,
+      };
+
+      const { endDateError: nextEndDateError, endTimeError: nextEndTimeError } = getScheduleEndErrors(currentSchedule);
+      setEndDateError(nextEndDateError);
+      setEndTimeError(nextEndTimeError);
+
+      const isInvalid = nextEndDateError || nextEndTimeError;
+
+      if (!isInvalid) {
+        lastValidScheduleRef.current = currentSchedule;
+      }
+
+      // Notify parent
+      if (onChange) {
+        // If schedule is valid, use current values. 
+        // If invalid, use the last known valid schedule values for propagation.
+        const scheduleToPropagate = isInvalid ? lastValidScheduleRef.current : currentSchedule;
+
+        onChange({
+          startDate: scheduleToPropagate.startDate,
+          endDate: scheduleToPropagate.endDate,
+          startTime: scheduleToPropagate.startTime,
+          endTime: scheduleToPropagate.endTime,
+          notesMarkdown: field === "notesMarkdown" ? value : notesMarkdown,
+          location: locationData,
+          people: field === "people" ? value : people,
+          goals: field === "goals" ? value : goals,
+          linksMarkdown: field === "linksMarkdown" ? value : linksMarkdown,
+          recurrenceFrequency:
+            field === "recurrenceFrequency"
+              ? (value as RecurrenceFrequency | "none")
+              : recurrenceFrequency,
+          recurrenceInterval:
+            field === "recurrenceInterval"
+              ? (typeof value === "string" ? parseInt(value) || 1 : value)
+              : recurrenceInterval,
+        });
+      }
+    },
+    [
+      onChange,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      notesMarkdown,
+      locationData,
+      people,
+      goals,
+      linksMarkdown,
+      recurrenceFrequency,
+      recurrenceInterval,
+    ]
+  );
 
   // Location autocomplete handlers
   const performSearch = useCallback(
@@ -294,6 +361,23 @@ export default function TaskDetailsForm({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Notes Section */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2 text-slate-100 font-medium mb-1.5">
+          <IconAlignLeft size={18} className="text-purple-400" />
+          <h3>Notes</h3>
+        </div>
+        <textarea
+          value={notesMarkdown}
+          onChange={(e) => handleChange("notesMarkdown", e.target.value)}
+          placeholder="Add notes or details..."
+          rows={4}
+          className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors resize-y min-h-[100px]"
+        />
+      </div>
+
+      <div className={TASK_SECTION_DIVIDER} />
+
       {/* Schedule Section */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 text-slate-100 font-medium">
@@ -304,7 +388,7 @@ export default function TaskDetailsForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-slate-400">Start Date</label>
-            <SegmentedDateInput
+            <DateInputWithPicker
               value={startDate}
               onChange={(value) => handleChange("startDate", value)}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
@@ -312,10 +396,14 @@ export default function TaskDetailsForm({
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-slate-400">End Date</label>
-            <SegmentedDateInput
+            <DateInputWithPicker
               value={endDate}
               onChange={(value) => handleChange("endDate", value)}
-              className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
+              className={`bg-slate-800 border rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 transition-colors ${
+                endDateError
+                  ? "border-red-500 focus:ring-red-500/50 focus:border-red-500"
+                  : "border-slate-700 focus:ring-blue-500/50 focus:border-blue-500"
+              }`}
             />
           </div>
         </div>
@@ -323,141 +411,177 @@ export default function TaskDetailsForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-slate-400">Start Time</label>
-            <input
-              type="time"
+            <TimeInputWithPicker
               value={startTime}
-              onChange={(e) => handleChange("startTime", e.target.value)}
+              onChange={(value) => handleChange("startTime", value)}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-slate-400">End Time</label>
-            <input
-              type="time"
+            <TimeInputWithPicker
               value={endTime}
-              onChange={(e) => handleChange("endTime", e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
+              onChange={(value) => handleChange("endTime", value)}
+              className={`bg-slate-800 border rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 transition-colors ${
+                endTimeError
+                  ? "border-red-500 focus:ring-red-500/50 focus:border-red-500"
+                  : "border-slate-700 focus:ring-blue-500/50 focus:border-blue-500"
+              }`}
             />
           </div>
         </div>
 
-        {/* Repeating Placeholder */}
-        <div className="mt-1 p-3 rounded bg-slate-800/30 border border-slate-700/50 flex items-center justify-between opacity-75">
+        {(endDateError || endTimeError) && (
+          <p className="text-[10px] text-red-400 font-medium">
+            {endDateError ? "End date can't be before start date" : "End time can't be before start time"}
+          </p>
+        )}
+
+        {/* Repeating Section */}
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-slate-400">
             <IconRepeat size={16} />
             <span className="text-sm">Repeating</span>
           </div>
-          <span className="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-400">
-            Coming soon
-          </span>
+
+          <div className="w-full">
+            <RecurrenceSelector
+              frequency={recurrenceFrequency}
+              interval={recurrenceInterval}
+              onChange={(f, i) => {
+                // Update frequency first
+                setRecurrenceFrequency(f);
+                setRecurrenceInterval(i);
+
+                // Notify parent
+                if (onChange) {
+                  onChange({
+                    startDate,
+                    endDate,
+                    startTime,
+                    endTime,
+                    notesMarkdown,
+                    location: locationData,
+                    people,
+                    goals,
+                    linksMarkdown,
+                    recurrenceFrequency: f,
+                    recurrenceInterval: i,
+                  });
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="h-px bg-slate-700/50" />
+      {renderLinking ? (
+        <>
+          <div className={TASK_SECTION_DIVIDER} />
+          {renderLinking()}
+        </>
+      ) : (
+        <div className={TASK_SECTION_DIVIDER} />
+      )}
 
-      {/* Details Section */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-slate-100 font-medium">
-          <IconAlignLeft size={18} className="text-purple-400" />
-          <h3>Details</h3>
-        </div>
-
-        {/* Description */}
+      {/* Details/Context Section */}
+      <div className="flex flex-col gap-6">
+        {/* Location Section */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-slate-400">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => handleChange("description", e.target.value)}
-            placeholder="Add notes, subtasks, or details..."
-            rows={4}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors resize-y min-h-[100px]"
-          />
-        </div>
+          <div className="flex items-center gap-2 text-slate-100 font-medium mb-1.5">
+            <IconMapPin size={18} className="text-rose-400" />
+            <h3>Location</h3>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <div className="relative">
+              <input
+                ref={locationInputRef}
+                type="text"
+                value={locationQuery}
+                onChange={handleLocationInputChange}
+                onFocus={handleLocationFocus}
+                onBlur={handleLocationBlur}
+                onKeyDown={handleLocationKeyDown}
+                placeholder="Search for a place..."
+                autoComplete="off"
+                role="combobox"
+                aria-expanded={isDropdownOpen}
+                aria-controls="location-listbox"
+                aria-activedescendant={
+                  highlightIndex >= 0
+                    ? `location-option-${highlightIndex}`
+                    : undefined
+                }
+                className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors pr-8"
+              />
+              {isSearching && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <IconLoader2 size={16} className="text-slate-400 animate-spin" />
+                </div>
+              )}
 
-        {/* Location Autocomplete */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-slate-400 flex items-center gap-1">
-            <IconMapPin size={12} /> Location
-          </label>
-          <div className="relative">
-            <input
-              ref={locationInputRef}
-              type="text"
-              value={locationQuery}
-              onChange={handleLocationInputChange}
-              onFocus={handleLocationFocus}
-              onBlur={handleLocationBlur}
-              onKeyDown={handleLocationKeyDown}
-              placeholder="Search for a place..."
-              autoComplete="off"
-              role="combobox"
-              aria-expanded={isDropdownOpen}
-              aria-controls="location-listbox"
-              aria-activedescendant={
-                highlightIndex >= 0
-                  ? `location-option-${highlightIndex}`
-                  : undefined
-              }
-              className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors pr-8"
-            />
-            {isSearching && (
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <IconLoader2 size={16} className="text-slate-400 animate-spin" />
-              </div>
-            )}
+              {/* Suggestions Dropdown */}
+              {isDropdownOpen && suggestions.length > 0 && (
+                <ul
+                  ref={dropdownRef}
+                  id="location-listbox"
+                  role="listbox"
+                  className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto"
+                >
+                  {suggestions.map((suggestion, index) => (
+                    <li
+                      key={suggestion.id}
+                      id={`location-option-${index}`}
+                      role="option"
+                      aria-selected={index === highlightIndex}
+                      onClick={() => selectSuggestion(suggestion)}
+                      onMouseEnter={() => setHighlightIndex(index)}
+                      className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
+                        index === highlightIndex
+                          ? "bg-purple-500/20 text-slate-100"
+                          : "text-slate-300 hover:bg-slate-700/50"
+                      }`}
+                    >
+                      <div className="font-medium truncate">{suggestion.label}</div>
+                      {suggestion.secondaryLabel && (
+                        <div className="text-xs text-slate-500 truncate">
+                          {suggestion.secondaryLabel}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
-            {/* Suggestions Dropdown */}
-            {isDropdownOpen && suggestions.length > 0 && (
-              <ul
-                ref={dropdownRef}
-                id="location-listbox"
-                role="listbox"
-                className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto"
+            {/* Open Map Link */}
+            {locationData?.mapUrl && (
+              <a
+                href={locationData.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors w-fit"
               >
-                {suggestions.map((suggestion, index) => (
-                  <li
-                    key={suggestion.id}
-                    id={`location-option-${index}`}
-                    role="option"
-                    aria-selected={index === highlightIndex}
-                    onClick={() => selectSuggestion(suggestion)}
-                    onMouseEnter={() => setHighlightIndex(index)}
-                    className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
-                      index === highlightIndex
-                        ? "bg-purple-500/20 text-slate-100"
-                        : "text-slate-300 hover:bg-slate-700/50"
-                    }`}
-                  >
-                    <div className="font-medium truncate">{suggestion.label}</div>
-                    {suggestion.secondaryLabel && (
-                      <div className="text-xs text-slate-500 truncate">
-                        {suggestion.secondaryLabel}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                <IconExternalLink size={12} />
+                Open in Maps
+              </a>
             )}
           </div>
-
-          {/* Open Map Link */}
-          {locationData?.mapUrl && (
-            <a
-              href={locationData.mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors w-fit"
-            >
-              <IconExternalLink size={12} />
-              Open in Maps
-            </a>
-          )}
         </div>
+
+          <div className={TASK_SECTION_DIVIDER} />
+
         {/* Links Section */}
-        <LinksEditor
-          linksMarkdown={linksMarkdown}
-          onChange={(next) => handleChange("linksMarkdown", next)}
-        />
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 text-slate-100 font-medium mb-1.5">
+            <IconExternalLink size={18} className="text-teal-400" />
+            <h3>Links</h3>
+          </div>
+          <LinksEditor
+            linksMarkdown={linksMarkdown}
+            onChange={(next) => handleChange("linksMarkdown", next)}
+          />
+        </div>
       </div>
     </div>
   );

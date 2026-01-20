@@ -7,6 +7,7 @@ import type {
   WeeklyItemType,
   Goal,
   Companion,
+  RecurrenceRule,
 } from "../../../types/weekly";
 import TaskDetailsContent from "./TaskDetailsContent";
 import { IconX } from "@tabler/icons-react";
@@ -22,6 +23,7 @@ interface TaskDetailsModalProps {
   task: Task;
   goals: Goal[];
   companions: Companion[];
+  recurrences?: Record<string, RecurrenceRule>;
   isOpen: boolean;
   onClose: () => void;
   onStatusChange?: (status: TaskStatus) => void;
@@ -30,7 +32,27 @@ interface TaskDetailsModalProps {
   onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
+  onNotesChange?: (notesMarkdown?: string) => void;
   onLocationChange?: (location?: TaskLocation) => void;
+  onScheduleChange?: (schedule: {
+    startDate?: string;
+    endDate?: string;
+    startTime?: string;
+    endTime?: string;
+  }) => void;
+  onRecurrenceChange?: (
+    rule: Omit<
+      RecurrenceRule,
+      | "id"
+      | "title"
+      | "type"
+      | "goalIds"
+      | "companionIds"
+      | "linksMarkdown"
+      | "location"
+      | "groupId"
+    > | null
+  ) => void;
   onDelete?: () => void;
 }
 
@@ -38,6 +60,7 @@ export default function TaskDetailsModal({
   task,
   goals,
   companions,
+  recurrences,
   isOpen,
   onClose,
   onStatusChange,
@@ -47,6 +70,8 @@ export default function TaskDetailsModal({
   onCompanionsChange,
   onLinksChange,
   onLocationChange,
+  onScheduleChange,
+  onRecurrenceChange,
   onDelete,
 }: TaskDetailsModalProps) {
   useEffect(() => {
@@ -72,13 +97,17 @@ export default function TaskDetailsModal({
             task={task}
             goals={goals}
             companions={companions}
+            recurrences={recurrences}
             onStatusChange={onStatusChange}
             onTitleChange={onTitleChange}
             onTypeChange={onTypeChange}
             onGoalsChange={onGoalsChange}
             onCompanionsChange={onCompanionsChange}
             onLinksChange={onLinksChange}
+            onNotesChange={onNotesChange}
             onLocationChange={onLocationChange}
+            onScheduleChange={onScheduleChange}
+            onRecurrenceChange={onRecurrenceChange}
             onDelete={onDelete}
           />
         </div>

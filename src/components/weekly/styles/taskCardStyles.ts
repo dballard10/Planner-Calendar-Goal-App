@@ -21,6 +21,18 @@ export const TASK_INDICATOR_GROUP =
   "flex items-center gap-3 px-2 opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0";
 export const TASK_KIND_BADGE =
   "flex-shrink-0 h-6 flex items-center justify-center min-w-[40px]";
+
+export const TASK_ACTIONS_CONTAINER = "absolute right-1 top-1/2 -translate-y-1/2 flex items-center z-10 group/actions";
+
+export const TASK_ACTIONS_BASE_BUTTON = 
+  "p-1 rounded transition-all duration-200 ease-out text-slate-400 hover:text-slate-100 hover:bg-slate-800 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100";
+
+export const TASK_ACTIONS_STRIP = 
+  "absolute right-0 flex items-center rounded-lg pl-2 pr-8 py-1 gap-1 transition-all duration-300 ease-out origin-right opacity-0 translate-x-4 pointer-events-none group-hover/actions:opacity-100 group-hover/actions:translate-x-0 group-hover/actions:pointer-events-auto group-focus-within/actions:opacity-100 group-focus-within/actions:translate-x-0 group-focus-within/actions:pointer-events-auto border border-slate-700 shadow-xl";
+
+export const TASK_ACTION_ITEM_BUTTON = 
+  "p-1 rounded transition-colors text-slate-400 hover:text-slate-100 hover:bg-slate-700";
+
 export const TASK_DELETE_BUTTON =
   "absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded transition-all duration-200 ease-out text-slate-400 hover:text-red-400 hover:bg-slate-800 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto";
 

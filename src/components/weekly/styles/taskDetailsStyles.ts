@@ -8,7 +8,7 @@ export const TASK_DETAILS_PAGE_CONTENT_WRAPPER = "flex-1 overflow-y-auto";
 
 export const TASK_DETAILS_ROOT = "flex flex-col h-full";
 export const TASK_DETAILS_HEADER =
-  "top-0 z-10 flex flex-col gap-4 border-b border-slate-700 bg-slate-900/95 backdrop-blur-sm px-4 pt-4 pb-4";
+  "top-0 z-10 flex flex-col gap-4 border-b-2 border-slate-700/80 bg-slate-900/95 backdrop-blur-sm px-4 pt-4 pb-4";
 export const TASK_DETAILS_HEADER_ROW = "flex items-start gap-3";
 export const TASK_DETAILS_TITLE_INPUT =
   "text-xl font-bold text-slate-100 leading-tight bg-transparent border-none outline-none p-0 mt-1.5 focus:ring-0 w-full placeholder-slate-500";
@@ -27,7 +27,9 @@ export const TASK_TYPE_BUTTON_UNSELECTED =
   "bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-900/60";
 
 export const TASK_LINKS_GRID =
-  "grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-slate-700 pb-6";
+  "grid grid-cols-1 md:grid-cols-2 gap-6 border-b-2 border-slate-700/80 pb-6";
+
+export const TASK_SECTION_DIVIDER = "h-[2px] bg-slate-700/80";
 
 export const TASK_GOAL_SELECTOR = "space-y-2 relative";
 export const TASK_GOAL_SELECTOR_LABEL =

@@ -6,8 +6,10 @@ import type {
   WeeklyItemType,
   Goal,
   Companion,
+  RecurrenceRule,
+  RecurrenceFrequency,
 } from "../../../types/weekly";
-import { IconTrash } from "@tabler/icons-react";
+import { IconTrash, IconTarget, IconUsers, IconX } from "@tabler/icons-react";
 import StatusSelector from "../task/StatusSelector";
 import TaskDetailsForm from "./TaskDetailsForm";
 import { ITEM_TYPE_STYLES, INFORMATIONAL_TYPES } from "../../../lib/itemTypeConfig";
@@ -28,22 +30,52 @@ import {
   TASK_TYPE_SELECTOR_BUTTONS,
   TASK_TYPE_SELECTOR_LABEL,
   TASK_TYPE_SELECTOR_WRAPPER,
+  TASK_GOAL_PILLS_WRAP,
+  TASK_GOAL_PILL,
+  TASK_GOAL_PILL_AVATAR_BORDER,
+  TASK_GOAL_PILL_REMOVE_ICON,
+  TASK_COMPANION_SELECTED_LIST,
+  TASK_COMPANION_PILL,
+  TASK_COMPANION_PILL_ICON,
+  TASK_COMPANION_SHOW_MORE_BUTTON,
 } from "../styles";
 import { GoalMultiSelect } from "./GoalMultiSelect";
 import { CompanionSelector } from "./CompanionSelector";
 import { useAppSettings } from "../../../context/AppSettingsContext";
+import Avatar from "../../ui/Avatar";
 
 interface TaskDetailsContentProps {
   task: Task;
   goals: Goal[];
   companions: Companion[];
+  recurrences?: Record<string, RecurrenceRule>;
   onStatusChange?: (status: TaskStatus) => void;
   onTitleChange?: (title: string) => void;
   onTypeChange?: (type: WeeklyItemType) => void;
   onGoalsChange?: (goalIds: string[]) => void;
   onCompanionsChange?: (companionIds: string[]) => void;
   onLinksChange?: (linksMarkdown?: string) => void;
+  onNotesChange?: (notesMarkdown?: string) => void;
   onLocationChange?: (location?: TaskLocation) => void;
+  onScheduleChange?: (schedule: {
+    startDate?: string;
+    endDate?: string;
+    startTime?: string;
+    endTime?: string;
+  }) => void;
+  onRecurrenceChange?: (
+    rule: Omit<
+      RecurrenceRule,
+      | "id"
+      | "title"
+      | "type"
+      | "goalIds"
+      | "companionIds"
+      | "linksMarkdown"
+      | "location"
+      | "groupId"
+    > | null
+  ) => void;
   onDelete?: () => void;
 }
 
@@ -61,13 +93,17 @@ export default function TaskDetailsContent({
   task,
   goals,
   companions,
+  recurrences = {},
   onStatusChange,
   onTitleChange,
   onTypeChange,
   onGoalsChange,
   onCompanionsChange,
   onLinksChange,
+  onNotesChange,
   onLocationChange,
+  onScheduleChange,
+  onRecurrenceChange,
   onDelete,
 }: TaskDetailsContentProps) {
   const settings = useAppSettings();
@@ -89,6 +125,13 @@ export default function TaskDetailsContent({
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>(
     task.goalIds ?? []
   );
+  const [showAllCompanions, setShowAllCompanions] = useState(false);
+
+  const selectedGoals = goals.filter(g => selectedGoalIds.includes(g.id));
+  const selectedCompanions = companions.filter(c => (task.companionIds ?? []).includes(c.id));
+
+  // Recurrence rule from task (if linked)
+  const currentRecurrence = task.recurrenceId ? recurrences[task.recurrenceId] : undefined;
 
   // Sync internal state if task changes (e.g. switching selection)
   useEffect(() => {
@@ -222,32 +265,174 @@ export default function TaskDetailsContent({
 
       {/* Content below the header - scrolls with the sidebar/modal */}
       <div className={TASK_FORM_WRAPPER}>
-        {/* Linking Section (Goals & Companions) */}
-        <div className={TASK_LINKS_GRID}>
-          <GoalMultiSelect
-            goals={goals}
-            selectedGoalIds={selectedGoalIds}
-            onChange={handleGoalsChange}
-          />
-          <CompanionSelector
-            companions={companions}
-            selectedIds={task.companionIds ?? []}
-            onChange={handleCompanionsChange}
-          />
-        </div>
-
         {/* Form Content */}
         <div>
           <TaskDetailsForm
             initialValues={{
-              description: "", // TODO: Wire up description to task model
+              notesMarkdown: task.notesMarkdown,
               linksMarkdown: task.linksMarkdown,
               location: task.location,
+              startDate: task.startDate,
+              endDate: task.endDate,
+              startTime: task.startTime,
+              endTime: task.endTime,
+              recurrenceFrequency: currentRecurrence?.frequency || "none",
+              recurrenceInterval: currentRecurrence?.interval || 1,
             }}
+            renderLinking={() => (
+              <div className={TASK_LINKS_GRID}>
+                {/* Row 1, Col 1: Goals Selector */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-slate-100 font-medium mb-1.5">
+                    <IconTarget size={18} className="text-emerald-400" />
+                    <h3>Goals</h3>
+                  </div>
+                  <GoalMultiSelect
+                    goals={goals}
+                    selectedGoalIds={selectedGoalIds}
+                    onChange={handleGoalsChange}
+                    showSelectedPills={false}
+                  />
+                </div>
+
+                {/* Row 1, Col 2: Added Goals */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+                    Added Goals
+                  </span>
+                  <div className={TASK_GOAL_PILLS_WRAP}>
+                    {selectedGoals.length > 0 ? (
+                      selectedGoals.map((g) => (
+                        <button
+                          key={g.id}
+                          onClick={() => handleGoalsChange(selectedGoalIds.filter(id => id !== g.id))}
+                          className={TASK_GOAL_PILL}
+                          title={`Unlink ${g.name}`}
+                        >
+                          <div className="relative w-5 h-5">
+                            <div
+                              className={TASK_GOAL_PILL_AVATAR_BORDER}
+                              style={{ backgroundColor: g.color ?? "#475569" }}
+                            >
+                              <span className="text-[11px] leading-none">{g.emoji}</span>
+                            </div>
+                            <div className={TASK_GOAL_PILL_REMOVE_ICON}>
+                              <IconX className="w-3.5 h-3.5 text-white" />
+                            </div>
+                          </div>
+                          <span>{g.name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-600 italic">None linked</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 2, Col 1: Companions Selector */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-slate-100 font-medium mb-1.5">
+                    <IconUsers size={18} className="text-orange-400" />
+                    <h3>Companions</h3>
+                  </div>
+                  <CompanionSelector
+                    companions={companions}
+                    selectedIds={task.companionIds ?? []}
+                    onChange={handleCompanionsChange}
+                    showSelectedPills={false}
+                  />
+                </div>
+
+                {/* Row 2, Col 2: Added Companions */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+                    Added Companions
+                  </span>
+                  <div className={TASK_COMPANION_SELECTED_LIST}>
+                    {selectedCompanions.length > 0 ? (
+                      <>
+                        {selectedCompanions
+                          .slice(0, showAllCompanions ? undefined : 5)
+                          .map((c) => (
+                            <button
+                              key={c.id}
+                              onClick={() => handleCompanionsChange((task.companionIds ?? []).filter(id => id !== c.id))}
+                              className={TASK_COMPANION_PILL}
+                              title={`Remove ${c.name}`}
+                            >
+                              <div className="relative w-4 h-4 flex items-center justify-center">
+                                <Avatar
+                                  content={getInitials(c.name)}
+                                  bgColor={c.color || "#64748b"}
+                                  size={16}
+                                  className="absolute inset-0 transition-opacity group-hover:opacity-0"
+                                />
+                                <div className={TASK_COMPANION_PILL_ICON}>
+                                  <IconX className="w-3.5 h-3.5" />
+                                </div>
+                              </div>
+                              <span>{c.name}</span>
+                            </button>
+                          ))}
+
+                        {selectedCompanions.length > 5 && (
+                          <button
+                            onClick={() => setShowAllCompanions(!showAllCompanions)}
+                            className={TASK_COMPANION_SHOW_MORE_BUTTON}
+                          >
+                            {showAllCompanions
+                              ? "Show Less"
+                              : `+${selectedCompanions.length - 5} more`}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-sm text-slate-600 italic">None added</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             onChange={(values) => {
+              if (values.notesMarkdown !== task.notesMarkdown) {
+                onNotesChange?.(values.notesMarkdown);
+              }
               if (values.linksMarkdown !== task.linksMarkdown) {
                 onLinksChange?.(values.linksMarkdown);
               }
+              
+              // Schedule changes
+              const scheduleChanged = 
+                values.startDate !== task.startDate ||
+                values.endDate !== task.endDate ||
+                values.startTime !== task.startTime ||
+                values.endTime !== task.endTime;
+                
+              if (scheduleChanged) {
+                onScheduleChange?.({
+                  startDate: values.startDate,
+                  endDate: values.endDate,
+                  startTime: values.startTime,
+                  endTime: values.endTime,
+                });
+              }
+
+              // Recurrence changes
+              const freqChanged = values.recurrenceFrequency !== (currentRecurrence?.frequency || "none");
+              const intervalChanged = values.recurrenceInterval !== (currentRecurrence?.interval || 1);
+
+              if (freqChanged || intervalChanged) {
+                if (values.recurrenceFrequency === "none") {
+                  onRecurrenceChange?.(null);
+                } else {
+                  onRecurrenceChange?.({
+                    frequency: values.recurrenceFrequency as RecurrenceFrequency,
+                    interval: values.recurrenceInterval || 1,
+                    startDateISO: values.startDate || new Date().toISOString().split("T")[0],
+                  });
+                }
+              }
+
               // Location changes are handled via a separate callback
             }}
             onLocationChange={onLocationChange}

@@ -54,12 +54,8 @@ export function RightSidePanel({
   const [expandedWidthPx, setExpandedWidthPx] = useState(defaultWidthPx);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Reset expanded state when panel closes, so it opens in normal mode next time
-  useEffect(() => {
-    if (!isOpen) {
-      setIsExpanded(false);
-    }
-  }, [isOpen]);
+  // Computed width based on current state
+  const currentWidth = isExpanded ? expandedWidthPx : collapsedWidthPx;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -180,17 +176,16 @@ export function RightSidePanel({
   // Since the plan says "gate it... likely false", I'll assume we don't need it active for now.
 
   const panelTransition: Transition = {
-    x: {
-      type: "spring",
-      damping: 25,
-      stiffness: 200,
-    },
+    x: isResizing
+      ? { duration: 0 }
+      : isOpen
+      ? { type: "spring", damping: 25, stiffness: 200 }
+      : { type: "tween", duration: 0.3, ease: "circOut" },
     width: isResizing
       ? { duration: 0 }
-      : {
-          duration: 0.45,
-          ease: "easeInOut",
-        },
+      : isOpen
+      ? { duration: 0.45, ease: "easeInOut" }
+      : { duration: 0.3, ease: "circOut" },
   };
 
   const handleToggleExpanded = () => {
@@ -243,17 +238,25 @@ export function RightSidePanel({
       )}
 
       <motion.div
-        layout
         initial={false}
         animate={{
-          x: isOpen ? 0 : "100%",
-          width: isExpanded ? expandedWidthPx : collapsedWidthPx,
+          x: isOpen ? 0 : currentWidth,
+          width: currentWidth,
+        }}
+        onAnimationComplete={() => {
+          if (!isOpen) {
+            setIsExpanded(false);
+          }
         }}
         transition={panelTransition}
         className={`fixed inset-y-0 right-0 z-40 bg-slate-900 border-l border-slate-700 shadow-2xl ${className} ${
           isResizing ? "select-none" : ""
         }`}
-        style={{ maxWidth: "100%" }}
+        style={{ 
+          maxWidth: "100%",
+          pointerEvents: isOpen ? "auto" : "none"
+        }}
+        aria-hidden={!isOpen}
         ref={panelRef}
       >
         {/* Resize Handle */}
@@ -270,7 +273,7 @@ export function RightSidePanel({
 
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-3.5 border-b border-slate-700 bg-slate-800/50">
+          <div className="flex items-center justify-between p-3.5 border-b-2 border-slate-700/80 bg-slate-800/50">
             <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
             <div className="flex items-center gap-1">
               {headerActions}

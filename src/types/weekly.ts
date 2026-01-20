@@ -2,6 +2,29 @@ export type TaskStatus = "open" | "completed" | "cancelled" | "failed";
 
 export type WeeklyItemType = "task" | "event" | "birthday" | "holiday";
 
+export type RecurrenceFrequency = "day" | "week" | "month";
+
+export interface RecurrenceRule {
+  id: string;
+  frequency: RecurrenceFrequency;
+  interval: number;
+  startDateISO: string;
+  endDateISO?: string;
+  // Template fields for generated tasks
+  title: string;
+  type: WeeklyItemType;
+  goalIds?: string[];
+  companionIds?: string[];
+  linksMarkdown?: string;
+  location?: TaskLocation;
+  notesMarkdown?: string;
+  groupId?: string | null;
+}
+
+export interface RecurrenceException {
+  skipDatesISO: string[];
+}
+
 export interface Goal {
   id: string;
   name: string;
@@ -64,6 +87,15 @@ export interface Task {
   companionIds?: string[];
   linksMarkdown?: string;
   location?: TaskLocation;
+  notesMarkdown?: string;
+  // Recurrence linkage
+  recurrenceId?: string;
+  occurrenceDateISO?: string;
+  // Schedule fields
+  startDate?: string; // ISO YYYY-MM-DD
+  endDate?: string;   // ISO YYYY-MM-DD
+  startTime?: string; // 24h HH:mm
+  endTime?: string;   // 24h HH:mm
 }
 
 export interface Group {
@@ -80,4 +112,5 @@ export interface WeekState {
   groups: Group[];
   goals: Goal[];
   companions: Companion[];
+  recurrences?: Record<string, RecurrenceRule>;
 }

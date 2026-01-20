@@ -3,6 +3,15 @@ import {
   IconSortAscending,
   IconFilter,
   IconSettings,
+  IconChevronDown,
+  IconChevronUp,
+  IconCopy,
+  IconClipboard,
+  IconTrash,
+  IconCircle,
+  IconCircleCheck,
+  IconCircleMinus,
+  IconCircleX,
 } from "@tabler/icons-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -11,43 +20,68 @@ import type { TaskStatus } from "../../../types/weekly";
 
 type MenuType = "sort" | "filter" | "settings" | null;
 
-export type TaskFilter = "all" | TaskStatus;
+export type TaskFilter = TaskStatus[];
 
 export type DaySortMode =
   | "position"
-  | "createdAt"
-  | "titleAsc"
   | "type"
   | "status";
 
 interface DayCardSettingsProps {
-  taskFilter: TaskFilter;
-  onTaskFilterChange: (next: TaskFilter) => void;
+  taskFilters: TaskFilter;
+  onTaskFiltersChange: (next: TaskFilter) => void;
   sortMode: DaySortMode;
   onSortModeChange: (next: DaySortMode) => void;
+  // Collapse/Expand
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
+  // Copy/Paste
+  onCopyDay: () => void;
+  onPasteDay: () => void;
+  canPaste: boolean;
+  // Delete All
+  onDeleteAll: () => void;
 }
 
-const FILTER_OPTIONS: Array<{ value: TaskFilter; label: string }> = [
-  { value: "all", label: "All tasks" },
-  { value: "open", label: "Open only" },
-  { value: "completed", label: "Completed only" },
-  { value: "cancelled", label: "Cancelled only" },
-  { value: "failed", label: "Failed only" },
+const FILTER_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
+  { value: "open", label: "Open" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "failed", label: "Failed" },
 ];
+
+const STATUS_ICON_MAP: Record<
+  TaskStatus,
+  { icon: typeof IconCircle; className: string }
+> = {
+  open: { icon: IconCircle, className: "text-slate-200" },
+  completed: { icon: IconCircleCheck, className: "text-emerald-400" },
+  cancelled: { icon: IconCircleMinus, className: "text-yellow-400" },
+  failed: { icon: IconCircleX, className: "text-red-400" },
+};
 
 const SORT_OPTIONS: Array<{ value: DaySortMode; label: string }> = [
   { value: "position", label: "Default" },
-  { value: "titleAsc", label: "Title (A-Z)" },
   { value: "type", label: "Task type" },
   { value: "status", label: "Status" },
-  { value: "createdAt", label: "Created time" },
 ];
 
+const BUTTON_BASE =
+  "flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors select-none";
+const BUTTON_ACTIVE = "text-slate-100";
+const BUTTON_INACTIVE = "text-slate-400 hover:text-slate-100";
+
 export default function DayCardSettings({
-  taskFilter,
-  onTaskFilterChange,
+  taskFilters,
+  onTaskFiltersChange,
   sortMode,
   onSortModeChange,
+  isCollapsed,
+  onToggleCollapsed,
+  onCopyDay,
+  onPasteDay,
+  canPaste,
+  onDeleteAll,
 }: DayCardSettingsProps) {
   const [openMenu, setOpenMenu] = useState<MenuType>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,8 +116,6 @@ export default function DayCardSettings({
     }
   }, [close, open, openMenu]);
 
-  // Close menus when clicking outside (handled by portal overlay for click-away)
-  // For hover logic, we use onMouseLeave with a delay
   const closeTimeoutRef = useRef<number | null>(null);
 
   const handleMouseEnter = (menu: MenuType) => {
@@ -97,10 +129,9 @@ export default function DayCardSettings({
   const handleMouseLeave = () => {
     closeTimeoutRef.current = window.setTimeout(() => {
       setOpenMenu(null);
-    }, 150); // Small delay to allow moving to portal
+    }, 150);
   };
 
-  // Handle ESC key to close menus
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && openMenu) {
@@ -125,7 +156,7 @@ export default function DayCardSettings({
 
       {/* Expandable Menu Container */}
       <div
-        className={`absolute left-0 flex items-center bg-slate-800 rounded-r-lg pl-8 pr-2 py-1 gap-2 transition-all duration-300 ease-out origin-left ${
+        className={`absolute left-0 flex items-center bg-slate-800 rounded-lg border border-slate-700 shadow-xl pl-8 pr-2 py-1 gap-1 transition-all duration-300 ease-out origin-left ${
           openMenu
             ? "opacity-100 translate-x-0 pointer-events-auto"
             : "opacity-0 -translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto"
@@ -140,10 +171,8 @@ export default function DayCardSettings({
         >
           <button
             type="button"
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors ${
-              openMenu === "sort"
-                ? "bg-slate-700 text-slate-100"
-                : "text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+            className={`${BUTTON_BASE} ${
+              openMenu === "sort" ? BUTTON_ACTIVE : BUTTON_INACTIVE
             }`}
           >
             <IconSortAscending className="w-3 h-3" />
@@ -160,10 +189,8 @@ export default function DayCardSettings({
         >
           <button
             type="button"
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors ${
-              openMenu === "filter"
-                ? "bg-slate-700 text-slate-100"
-                : "text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+            className={`${BUTTON_BASE} ${
+              openMenu === "filter" ? BUTTON_ACTIVE : BUTTON_INACTIVE
             }`}
           >
             <IconFilter className="w-3 h-3" />
@@ -180,10 +207,8 @@ export default function DayCardSettings({
         >
           <button
             type="button"
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors ${
-              openMenu === "settings"
-                ? "bg-slate-700 text-slate-100"
-                : "text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+            className={`${BUTTON_BASE} ${
+              openMenu === "settings" ? BUTTON_ACTIVE : BUTTON_INACTIVE
             }`}
           >
             <IconSettings className="w-3 h-3" />
@@ -196,10 +221,7 @@ export default function DayCardSettings({
       {openMenu &&
         position &&
         createPortal(
-          <div
-            className="fixed inset-0 z-50 pointer-events-none" // pointer-events-none allows clicks through to background if not hitting menu
-          >
-            {/* Dropdown itself needs pointer-events-auto */}
+          <div className="fixed inset-0 z-50 pointer-events-none">
             <div
               className={`absolute rounded bg-slate-900 border border-slate-700 shadow-lg overflow-hidden pointer-events-auto ${
                 openMenu === "settings" ? "w-40" : "w-32"
@@ -241,39 +263,99 @@ export default function DayCardSettings({
                   })}
                 {openMenu === "filter" &&
                   FILTER_OPTIONS.map((option) => {
-                    const isSelected = taskFilter === option.value;
+                    const isSelected = taskFilters.includes(option.value);
                     return (
                       <button
                         key={option.value}
                         type="button"
-                        role="option"
-                        aria-selected={isSelected}
+                        role="menuitemcheckbox"
+                        aria-checked={isSelected}
                         onClick={() => {
-                          onTaskFilterChange(option.value);
-                          setOpenMenu(null);
+                          if (isSelected) {
+                            onTaskFiltersChange(
+                              taskFilters.filter((v) => v !== option.value)
+                            );
+                          } else {
+                            onTaskFiltersChange([...taskFilters, option.value]);
+                          }
                         }}
-                        className={`w-full text-left px-3 py-2 text-xs ${
+                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
                           isSelected
                             ? "bg-slate-800 text-slate-100"
                             : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
                         }`}
                       >
-                        {option.label}
+                        <span className="flex items-center gap-2">
+                          {(() => {
+                            const { icon: Icon, className } =
+                              STATUS_ICON_MAP[option.value];
+                            return <Icon className={`w-3.5 h-3.5 ${className}`} />;
+                          })()}
+                          <span>{option.label}</span>
+                        </span>
+                        {isSelected && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                        )}
                       </button>
                     );
                   })}
                 {openMenu === "settings" && (
-                  <>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      Collapse default
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onToggleCollapsed();
+                        setOpenMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100 flex items-center gap-2"
+                    >
+                      {isCollapsed ? (
+                        <IconChevronDown className="w-3.5 h-3.5" />
+                      ) : (
+                        <IconChevronUp className="w-3.5 h-3.5" />
+                      )}
+                      {isCollapsed ? "Expand Day" : "Collapse Day"}
                     </button>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      Duplicate day
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCopyDay();
+                        setOpenMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100 flex items-center gap-2"
+                    >
+                      <IconCopy className="w-3.5 h-3.5" />
+                      Copy Day
                     </button>
-                    <button className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100">
-                      Clear completed
+                    <button
+                      type="button"
+                      disabled={!canPaste}
+                      onClick={() => {
+                        onPasteDay();
+                        setOpenMenu(null);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 ${
+                        canPaste
+                          ? "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                          : "text-slate-600 cursor-not-allowed"
+                      }`}
+                    >
+                      <IconClipboard className="w-3.5 h-3.5" />
+                      Paste Day
                     </button>
-                  </>
+                    <div className="h-[2px] bg-slate-700/80 my-1" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDeleteAll();
+                        setOpenMenu(null);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs text-rose-400 hover:bg-rose-900/30 hover:text-rose-300 flex items-center gap-2"
+                    >
+                      <IconTrash className="w-3.5 h-3.5" />
+                      Delete All
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

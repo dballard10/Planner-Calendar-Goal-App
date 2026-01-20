@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { Task, TaskStatus, Goal, Companion } from "../../../types/weekly";
-import { IconTrash } from "@tabler/icons-react";
+import { IconTrash, IconSettings, IconCopy } from "@tabler/icons-react";
 import StatusSelector from "./StatusSelector";
 import {
   ITEM_TYPE_STYLES,
@@ -14,9 +14,12 @@ import {
   TASK_CARD_TITLE_DISPLAY,
   TASK_CARD_TITLE_INPUT,
   TASK_CARD_TITLE_WRAPPER,
-  TASK_DELETE_BUTTON,
   TASK_INDICATOR_GROUP,
   TASK_KIND_BADGE,
+  TASK_ACTIONS_CONTAINER,
+  TASK_ACTIONS_BASE_BUTTON,
+  TASK_ACTIONS_STRIP,
+  TASK_ACTION_ITEM_BUTTON,
   getTaskCardBaseClasses,
   getDynamicTaskCardGradientStyle,
 } from "../styles";
@@ -31,6 +34,7 @@ interface TaskCardProps {
   onStatusChange: (taskId: string, nextStatus: TaskStatus) => void;
   onTitleChange: (taskId: string, newTitle: string) => void;
   onDelete?: (taskId: string) => void;
+  onCopy?: (taskId: string) => void;
   onOpenDetailsSidePanel?: (taskId: string) => void;
   onOpenDetailsModal?: (taskId: string) => void;
   onOpenDetailsPage?: (taskId: string) => void;
@@ -46,6 +50,7 @@ export default function TaskCard({
   onStatusChange,
   onTitleChange,
   onDelete,
+  onCopy,
   onOpenDetailsSidePanel,
   isHighlighted = false,
 }: TaskCardProps) {
@@ -53,6 +58,7 @@ export default function TaskCard({
   const isNewTask = task.title === PLACEHOLDER_TEXT;
   const [isEditing, setIsEditing] = useState(isNewTask);
   const [editTitle, setEditTitle] = useState(task.title);
+  const [isActionsExpanded, setIsActionsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus input when entering edit mode
@@ -110,6 +116,13 @@ export default function TaskCard({
     e.stopPropagation();
     if (onDelete) {
       onDelete(task.id);
+    }
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onCopy) {
+      onCopy(task.id);
     }
   };
 
@@ -224,7 +237,11 @@ export default function TaskCard({
           )}
         </div>
 
-        <div className={TASK_CARD_INDICATORS_ROW}>
+        <div
+          className={`${TASK_CARD_INDICATORS_ROW} transition-all duration-300 ${
+            isActionsExpanded ? "pr-20" : "pr-0"
+          }`}
+        >
           {/* Indicators Row */}
           {!isEditing &&
             (taskGoals.length > 0 || taskCompanions.length > 0) && (
@@ -274,14 +291,44 @@ export default function TaskCard({
         </div>
       </div>
 
-      {onDelete && (
-        <button
-          onClick={handleDelete}
-          className={TASK_DELETE_BUTTON}
-          aria-label="Delete task"
+      {(onDelete || onCopy) && (
+        <div
+          className={TASK_ACTIONS_CONTAINER}
+          onMouseEnter={() => setIsActionsExpanded(true)}
+          onMouseLeave={() => setIsActionsExpanded(false)}
+          onFocusCapture={() => setIsActionsExpanded(true)}
+          onBlurCapture={() => setIsActionsExpanded(false)}
         >
-          <IconTrash className="w-4 h-4" />
-        </button>
+          <div className={TASK_ACTIONS_STRIP}>
+            {onCopy && (
+              <button
+                onClick={handleCopy}
+                className={TASK_ACTION_ITEM_BUTTON}
+                aria-label="Copy task"
+                title="Copy task"
+              >
+                <IconCopy className="w-4 h-4" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={handleDelete}
+                className={`${TASK_ACTION_ITEM_BUTTON} hover:!text-red-400`}
+                aria-label="Delete task"
+                title="Delete task"
+              >
+                <IconTrash className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <button
+            className={TASK_ACTIONS_BASE_BUTTON}
+            aria-label="Task actions"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <IconSettings className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );

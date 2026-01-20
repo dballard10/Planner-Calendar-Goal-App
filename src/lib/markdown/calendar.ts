@@ -1,4 +1,4 @@
-import { CalendarEvent } from "../../types/calendar";
+import type { CalendarEvent } from "../../types/calendar";
 
 /**
  * ### Calendar Markdown Format
