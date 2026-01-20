@@ -14,9 +14,10 @@ export const TASK_CARD_TITLE_INPUT =
   "flex-1 w-full px-2 py-1 bg-transparent rounded text-inherit focus:outline-none";
 export const TASK_CARD_TITLE_DISPLAY =
   "inline-block text-inherit cursor-text transition-transform origin-left hover:scale-105";
-export const TASK_CARD_TITLE_WRAPPER = "flex-1 px-2 py-1 select-none truncate";
+export const TASK_CARD_TITLE_WRAPPER =
+  "flex-1 px-2 py-1 select-none truncate transition-transform duration-300 ease-out group-hover:-translate-x-3 group-focus-within:-translate-x-3";
 export const TASK_CARD_INDICATORS_ROW =
-  "flex items-center gap-2 transition-transform duration-200 ease-out group-hover:-translate-x-3 group-focus-within:-translate-x-3";
+  "flex items-center gap-2 transition-transform duration-300 ease-out group-hover:-translate-x-3 group-focus-within:-translate-x-3";
 export const TASK_INDICATOR_GROUP =
   "flex items-center gap-3 px-2 opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0";
 export const TASK_KIND_BADGE =

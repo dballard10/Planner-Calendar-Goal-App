@@ -202,7 +202,7 @@ export default function TaskCard({
           </div>
         )}
 
-        <div className="flex-1 min-w-0 flex items-center gap-2">
+        <div className="flex-1 min-w-0 flex items-center gap-2 transition-all duration-300">
           {isEditing ? (
             <input
               ref={inputRef}
@@ -217,7 +217,11 @@ export default function TaskCard({
               className={TASK_CARD_TITLE_INPUT}
             />
           ) : (
-            <div className={TASK_CARD_TITLE_WRAPPER}>
+            <div
+              className={`${TASK_CARD_TITLE_WRAPPER} ${
+                isActionsExpanded ? "-translate-x-3" : "translate-x-0"
+              }`}
+            >
               <div
                 onClick={(e) => {
                   e.stopPropagation();

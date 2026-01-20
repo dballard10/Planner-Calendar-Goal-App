@@ -160,7 +160,7 @@ const livePreviewTheme = EditorView.theme(
       marginRight: "8px",
       backgroundColor: "var(--notes-checkbox-bg)",
       verticalAlign: "middle",
-      cursor: "default",
+      cursor: "pointer",
     },
     ".lp-checkbox-checked": {
       backgroundColor: "var(--notes-checkbox-checked-bg)",
@@ -263,15 +263,21 @@ const notesHighlightStyle = HighlightStyle.define([
 // ----------------------------------------------------------------------------
 class CheckboxWidget extends WidgetType {
   readonly checked: boolean;
+  readonly pos: number;
 
-  constructor(checked: boolean) {
+  constructor(checked: boolean, pos: number) {
     super();
     this.checked = checked;
+    this.pos = pos;
   }
 
   toDOM() {
     const span = document.createElement("span");
     span.className = `lp-checkbox${this.checked ? " lp-checkbox-checked" : ""}`;
+    span.setAttribute("data-checkbox-pos", this.pos.toString());
+    span.setAttribute("role", "checkbox");
+    span.setAttribute("aria-checked", this.checked ? "true" : "false");
+
     if (this.checked) {
       span.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     }
@@ -279,7 +285,7 @@ class CheckboxWidget extends WidgetType {
   }
 
   ignoreEvent() {
-    return true;
+    return false;
   }
 }
 
@@ -500,11 +506,13 @@ function buildDecorations(view: EditorView): RangeSet<Decoration> {
     }
 
     // Task list detection - [ ] or - [x]
-    const taskMatch = lineText.match(/^(\s*)- \[([ x])\]\s/);
+    const taskMatch = lineText.match(/^(\s*)- \[([ xX])\]\s/);
     if (taskMatch) {
       const indent = taskMatch[1].length;
-      const checked = taskMatch[2] === "x";
+      const checked = taskMatch[2].toLowerCase() === "x";
       const markerEnd = line.from + taskMatch[0].length;
+      // Position of the [ ] or [x] character (inside the brackets)
+      const checkboxCharPos = line.from + indent + 3;
 
       // Line decoration
       addRange(line.from, line.from, listItemMark);
@@ -515,7 +523,7 @@ function buildDecorations(view: EditorView): RangeSet<Decoration> {
         line.from + indent,
         line.from + indent,
         Decoration.widget({
-          widget: new CheckboxWidget(checked),
+          widget: new CheckboxWidget(checked, checkboxCharPos),
           side: 1,
         })
       );
@@ -729,6 +737,41 @@ export function LiveMarkdownEditor({
     []
   );
 
+  // Click handler for task checkboxes
+  const taskCheckboxClickHandler = useMemo(
+    () =>
+      EditorView.domEventHandlers({
+        mousedown: (event, view) => {
+          const target = event.target as HTMLElement;
+          if (target.closest(".lp-checkbox")) {
+            // Prevent editor from focusing or moving selection when clicking the checkbox
+            event.preventDefault();
+            return true;
+          }
+          return false;
+        },
+        click: (event, view) => {
+          const target = event.target as HTMLElement;
+          const checkbox = target.closest(".lp-checkbox");
+          if (checkbox) {
+            const posAttr = checkbox.getAttribute("data-checkbox-pos");
+            if (posAttr) {
+              const pos = parseInt(posAttr, 10);
+              const currentChar = view.state.doc.sliceString(pos, pos + 1);
+              const nextChar = currentChar === " " ? "x" : " ";
+              view.dispatch({
+                changes: { from: pos, to: pos + 1, insert: nextChar },
+              });
+              event.preventDefault();
+              return true;
+            }
+          }
+          return false;
+        },
+      }),
+    []
+  );
+
   // Jump to match when jumpTo changes
   useEffect(() => {
     if (!jumpTo || jumpTo.nonce === lastJumpNonce.current) return;
@@ -765,6 +808,7 @@ export function LiveMarkdownEditor({
     ...(mode === "preview" ? [livePreviewPlugin] : []),
     EditorView.lineWrapping,
     bracketLinkClickHandler,
+    taskCheckboxClickHandler,
   ];
 
   // Add placeholder extension
