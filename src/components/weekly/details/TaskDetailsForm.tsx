@@ -512,7 +512,7 @@ export default function TaskDetailsForm({
                     ? `location-option-${highlightIndex}`
                     : undefined
                 }
-                className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors pr-8"
+                className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:border-rose-400 transition-colors pr-8"
               />
               {isSearching && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -538,7 +538,7 @@ export default function TaskDetailsForm({
                       onMouseEnter={() => setHighlightIndex(index)}
                       className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
                         index === highlightIndex
-                          ? "bg-purple-500/20 text-slate-100"
+                          ? "bg-rose-400/20 text-slate-100"
                           : "text-slate-300 hover:bg-slate-700/50"
                       }`}
                     >

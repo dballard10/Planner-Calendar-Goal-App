@@ -87,7 +87,17 @@ export function CompanionSelector({
     <div className={TASK_COMPANION_SELECTOR} ref={companionDropdownRef}>
       <div
         onClick={() => setIsCompanionDropdownOpen(!isCompanionDropdownOpen)}
-        className={TASK_COMPANION_TRIGGER}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsCompanionDropdownOpen(!isCompanionDropdownOpen);
+          }
+        }}
+        className={`${TASK_COMPANION_TRIGGER} ${
+          isCompanionDropdownOpen ? "border-orange-500 ring-1 ring-orange-500/40" : ""
+        }`}
+        tabIndex={0}
+        role="button"
       >
         <span className="text-slate-400 select-none">
           {selectedCompanions.length > 0

@@ -75,7 +75,17 @@ export function GoalMultiSelect({
     <div className={TASK_GOAL_SELECTOR} ref={goalDropdownRef}>
       <div
         onClick={() => setIsGoalDropdownOpen(!isGoalDropdownOpen)}
-        className={TASK_GOAL_TRIGGER}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsGoalDropdownOpen(!isGoalDropdownOpen);
+          }
+        }}
+        className={`${TASK_GOAL_TRIGGER} ${
+          isGoalDropdownOpen ? "border-emerald-500 ring-1 ring-emerald-500/40" : ""
+        }`}
+        tabIndex={0}
+        role="button"
       >
         <span className="text-slate-400 select-none">
           {selectedGoals.length > 0

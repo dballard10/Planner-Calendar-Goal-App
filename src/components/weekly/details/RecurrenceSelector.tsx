@@ -69,9 +69,12 @@ export function RecurrenceSelector({
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      <div
+      <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={TASK_SELECTOR_TRIGGER}
+        className={`${TASK_SELECTOR_TRIGGER} focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-blue-500`}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
       >
         <span className="text-slate-200 select-none font-medium">{getLabel()}</span>
         <IconChevronDown
@@ -79,7 +82,7 @@ export function RecurrenceSelector({
             isOpen ? "rotate-180" : ""
           }`}
         />
-      </div>
+      </button>
 
       {isOpen && (
         <div className={TASK_SELECTOR_DROPDOWN}>
