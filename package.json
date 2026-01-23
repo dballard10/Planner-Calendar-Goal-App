@@ -7,13 +7,20 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset",
+    "supabase:migration:new": "supabase migration new",
+    "supabase:gen:types": "supabase gen types typescript --local > src/types/supabase.ts"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/language": "^6.12.1",
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.11",
+    "@supabase/supabase-js": "^2.91.1",
     "@tabler/icons-react": "^3.35.0",
     "@types/react-big-calendar": "^1.16.3",
     "@uiw/react-codemirror": "^4.25.4",

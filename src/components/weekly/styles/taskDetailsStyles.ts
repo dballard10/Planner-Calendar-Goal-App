@@ -34,10 +34,10 @@ export const TASK_SECTION_DIVIDER = "h-[2px] bg-slate-700/80";
 export const TASK_GOAL_SELECTOR = "space-y-2 relative";
 export const TASK_GOAL_SELECTOR_LABEL =
   "flex items-center gap-2 text-sm font-medium text-slate-400";
-export const TASK_SELECTOR_TRIGGER_BASE =
+export const TASK_SELECTOR_TRIGGER =
   "w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 outline-none hover:border-slate-600 cursor-pointer flex items-center justify-between transition-colors min-h-[38px] focus:ring-1 focus:outline-none";
-export const TASK_GOAL_TRIGGER = `${TASK_SELECTOR_TRIGGER_BASE} focus:border-emerald-500 focus:ring-emerald-500/40`;
-export const TASK_COMPANION_TRIGGER = `${TASK_SELECTOR_TRIGGER_BASE} focus:border-orange-500 focus:ring-orange-500/40`;
+export const TASK_GOAL_TRIGGER = `${TASK_SELECTOR_TRIGGER} focus:border-emerald-500 focus:ring-emerald-500/40`;
+export const TASK_COMPANION_TRIGGER = `${TASK_SELECTOR_TRIGGER} focus:border-orange-500 focus:ring-orange-500/40`;
 export const TASK_SELECTOR_DROPDOWN =
   "absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto z-30 ring-1 ring-slate-800 animate-in fade-in zoom-in-95 duration-100";
 export const TASK_GOAL_DROPDOWN = TASK_SELECTOR_DROPDOWN;
