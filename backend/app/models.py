@@ -23,6 +23,7 @@ class TaskRow(BaseModel):
     created_at: datetime
     title: str
     status: str = "open"
+    task_type_id: str = "task"
     assigned_date: date
     position: int = 0
     notes: str | None = None
@@ -40,6 +41,7 @@ class TaskCreate(BaseModel):
     assigned_date: date
     position: int = 0
     status: str = "open"
+    task_type_id: str | None = "task"
     notes: str | None = None
     links: list[dict[str, Any]] = Field(default_factory=list)
 
@@ -48,6 +50,7 @@ class TaskUpdate(BaseModel):
     """Payload for updating a task (all fields optional)."""
     title: str | None = None
     status: str | None = None
+    task_type_id: str | None = None
     notes: str | None = None
     start_date: date | None = None
     end_date: date | None = None

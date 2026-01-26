@@ -128,7 +128,7 @@ export function RightSidePanel({
     const startX = e.clientX;
     const startWidth = isExpanded ? expandedWidthPx : collapsedWidthPx;
     const snapPx = 16;
-    const CLOSE_DRAG_THRESHOLD_PX = 32;
+    const CLOSE_DRAG_THRESHOLD_PX = 128;
     let startXAtMin: number | null = null;
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
@@ -292,8 +292,7 @@ export function RightSidePanel({
           pointerEvents: isOpen ? "auto" : "none"
         }}
         aria-hidden={!isOpen}
-        // @ts-expect-error - inert is supported in React 19 but might missing from some TS configs
-        inert={!isOpen ? "" : undefined}
+        inert={!isOpen}
         ref={panelRef}
       >
         {/* Resize Handle */}

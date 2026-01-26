@@ -55,9 +55,6 @@ export function CreateWeekPickerButton({ onCreateWeek }: CreateWeekPickerButtonP
               <h4 className="text-sm font-semibold text-slate-200">
                 Create/Select Week
               </h4>
-              <p className="text-xs text-slate-400">
-                Select any date to jump to its corresponding week.
-              </p>
             </div>
 
             <DateInputWithPicker

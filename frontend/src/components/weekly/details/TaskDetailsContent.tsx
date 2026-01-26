@@ -58,10 +58,10 @@ interface TaskDetailsContentProps {
   onNotesChange?: (notesMarkdown?: string) => void;
   onLocationChange?: (location?: TaskLocation) => void;
   onScheduleChange?: (schedule: {
-    startDate?: string;
-    endDate?: string;
-    startTime?: string;
-    endTime?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
   }) => void;
   onRecurrenceChange?: (
     rule: Omit<
@@ -394,26 +394,41 @@ export default function TaskDetailsContent({
               </div>
             )}
             onChange={(values) => {
-              if (values.notesMarkdown !== task.notesMarkdown) {
+              const norm = (v: string | undefined | null) => (v === "" || v == null ? undefined : v);
+              
+              if (norm(values.notesMarkdown) !== norm(task.notesMarkdown)) {
                 onNotesChange?.(values.notesMarkdown);
               }
-              if (values.linksMarkdown !== task.linksMarkdown) {
+              if (norm(values.linksMarkdown) !== norm(task.linksMarkdown)) {
                 onLinksChange?.(values.linksMarkdown);
               }
               
+              // Normalize schedule values for comparison: treat "" as undefined/null
+              const normSchedule = (v: string | undefined | null) => (v === "" || v == null ? null : v);
+
+              const nextStartD = normSchedule(values.startDate);
+              const nextEndD = normSchedule(values.endDate);
+              const nextStartT = normSchedule(values.startTime);
+              const nextEndT = normSchedule(values.endTime);
+
+              const prevStartD = normSchedule(task.startDate);
+              const prevEndD = normSchedule(task.endDate);
+              const prevStartT = normSchedule(task.startTime);
+              const prevEndT = normSchedule(task.endTime);
+
               // Schedule changes
               const scheduleChanged = 
-                values.startDate !== task.startDate ||
-                values.endDate !== task.endDate ||
-                values.startTime !== task.startTime ||
-                values.endTime !== task.endTime;
+                nextStartD !== prevStartD ||
+                nextEndD !== prevEndD ||
+                nextStartT !== prevStartT ||
+                nextEndT !== prevEndT;
                 
               if (scheduleChanged) {
                 onScheduleChange?.({
-                  startDate: values.startDate,
-                  endDate: values.endDate,
-                  startTime: values.startTime,
-                  endTime: values.endTime,
+                  startDate: nextStartD,
+                  endDate: nextEndD,
+                  startTime: nextStartT,
+                  endTime: nextEndT,
                 });
               }
 

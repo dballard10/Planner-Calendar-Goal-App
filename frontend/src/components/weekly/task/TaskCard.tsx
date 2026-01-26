@@ -36,8 +36,6 @@ interface TaskCardProps {
   onDelete?: (taskId: string) => void;
   onCopy?: (taskId: string) => void;
   onOpenDetailsSidePanel?: (taskId: string) => void;
-  onOpenDetailsModal?: (taskId: string) => void;
-  onOpenDetailsPage?: (taskId: string) => void;
   isHighlighted?: boolean;
 }
 

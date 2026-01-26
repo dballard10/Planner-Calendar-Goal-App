@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAppSettings } from "../../../context/AppSettingsContext";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconFolders, IconPlus, IconTrash, IconSettings, IconCheck } from "@tabler/icons-react";
 import type {
   WeekState,
@@ -14,8 +13,6 @@ import { RightSidePanel } from "../../layout/RightSidePanel";
 import PageHeader from "../../layout/PageHeader";
 import { PanelToggle } from "../../layout/PanelToggle";
 import DayCard from "../day/DayCard";
-import TaskDetailsModal from "../details/TaskDetailsModal";
-import TaskDetailsFullPage from "../details/TaskDetailsFullPage";
 import TaskDetailsContent from "../details/TaskDetailsContent";
 import { computeWeekStats } from "../../../lib/weekly/stats";
 import { WeeklyStatsPanel } from "../WeeklyStatsPanel";
@@ -24,6 +21,7 @@ import { getGroupsForDay, getTasksForDay } from "./selectors";
 import { useWeeklyViewDetails } from "./useWeeklyViewDetails";
 import { WeeklyFolderTree } from "../sidebar/WeeklyFolderTree";
 import { DeleteRecurrenceModal } from "../shared/DeleteRecurrenceModal";
+import { UnsavedChangesModal } from "../shared/UnsavedChangesModal";
 import { CreateWeekPickerButton } from "../sidebar/CreateWeekPickerButton";
 import { useNotifications } from "../../../context/NotificationsContext";
 import { useAnchoredMenu } from "../shared/useAnchoredMenu";
@@ -50,10 +48,10 @@ interface WeeklyViewProps {
     updateTaskSchedule?: (
       id: string,
       schedule: {
-        startDate?: string;
-        endDate?: string;
-        startTime?: string;
-        endTime?: string;
+        startDate?: string | null;
+        endDate?: string | null;
+        startTime?: string | null;
+        endTime?: string | null;
       }
     ) => void;
     deleteTask: (id: string) => void;
@@ -106,12 +104,11 @@ export default function WeeklyView({
   onCreateCurrentWeek,
   onCreateWeekForDate,
 }: WeeklyViewProps) {
-  const settings = useAppSettings();
   const [panelMode, setPanelMode] = useState<
     "overview" | "folders" | "taskDetails"
   >("overview");
 
-  // Draft/Dirty state for Task Details
+  // Draft/Dirty state for Task Details (manual save only)
   const [isDirty, setIsDirty] = useState(false);
   const pendingPatchRef = useRef<Record<string, any>>({});
   const lastCommittedTaskIdRef = useRef<string | null>(null);
@@ -123,15 +120,25 @@ export default function WeeklyView({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
+  // Unsaved changes modal state
+  const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
+  const pendingActionRef = useRef<{ type: "close" } | { type: "switch"; taskId: string } | null>(null);
+
+  // Snapshot of task when opened - for discard restoration
+  const taskSnapshotRef = useRef<Task | null>(null);
+
   const {
     selectedTaskId,
     detailsMode,
     highlightedTaskId,
     openSidePanel,
-    openModal,
-    openPage,
     closeDetails,
   } = useWeeklyViewDetails({ openTaskId, onOpenTaskHandled });
+
+  const weekStartDateObj = useMemo(
+    () => new Date(weekState.weekStart),
+    [weekState.weekStart]
+  );
 
   const commitPendingTaskEdits = useCallback(async () => {
     if (!isDirty || !selectedTaskId) return;
@@ -139,6 +146,11 @@ export default function WeeklyView({
     const patch = { ...pendingPatchRef.current };
     setIsDirty(false);
     pendingPatchRef.current = {};
+
+    // If no backend-relevant fields were changed, skip the API call
+    if (Object.keys(patch).length === 0) {
+      return;
+    }
 
     try {
       await actions.commitTaskPatch(selectedTaskId, patch);
@@ -148,32 +160,21 @@ export default function WeeklyView({
     }
   }, [isDirty, selectedTaskId, actions]);
 
-  // Handle task switching - commit before switching
+  // Derived state - selected task object
+  const selectedTask = selectedTaskId
+    ? weekState.tasks.find((t) => t.id === selectedTaskId)
+    : undefined;
+
+  // Track when we switch tasks and capture snapshot for discard
   useEffect(() => {
-    if (lastCommittedTaskIdRef.current && lastCommittedTaskIdRef.current !== selectedTaskId) {
-      // We switched tasks. If dirty, the previous task's edits should have been committed by the close/switch handler.
-      // But as a safety measure, we ensure dirty is reset for the new task.
-      if (isDirty) {
-        // This case should ideally be handled by the interaction layer (clicking another task)
-        // but if it's not, we'd need to know the OLD ID to commit it.
-        // For now we rely on the close/switch handlers to call commit.
-      }
-    }
     if (selectedTaskId) {
       lastCommittedTaskIdRef.current = selectedTaskId;
     }
-  }, [selectedTaskId, isDirty]);
-
-  // Commit on unmount (tab change)
-  useEffect(() => {
-    return () => {
-      if (isDirty && selectedTaskId) {
-        // We can't use async here reliably in unmount, but we can try
-        const patch = { ...pendingPatchRef.current };
-        actions.commitTaskPatch(selectedTaskId, patch).catch(console.error);
-      }
-    };
-  }, [isDirty, selectedTaskId, actions]);
+    // Capture snapshot when task changes and we're clean
+    if (selectedTask && !isDirty) {
+      taskSnapshotRef.current = { ...selectedTask };
+    }
+  }, [selectedTaskId, selectedTask, isDirty]);
 
   const { confirm, notify } = useNotifications();
 
@@ -341,11 +342,6 @@ export default function WeeklyView({
 
   const canPaste = !!clipboard;
 
-  // Derived state
-  const selectedTask = selectedTaskId
-    ? weekState.tasks.find((t) => t.id === selectedTaskId)
-    : undefined;
-
   // Handler to add a new task (day level)
   const handleAddTask = (dayIndex: number, title: string) => {
     actions.addTask(dayIndex, title);
@@ -360,36 +356,104 @@ export default function WeeklyView({
     actions.addTask(dayIndex, title, groupId);
   };
 
+  // Helper to actually perform close/switch after save or discard
+  const performPendingAction = useCallback(() => {
+    const action = pendingActionRef.current;
+    pendingActionRef.current = null;
+
+    if (!action) return;
+
+    if (action.type === "close") {
+      isClosingTaskDetailsRef.current = true;
+      taskSnapshotRef.current = null; // Clear snapshot on close
+      setIsPanelOpen(false);
+      if (closeDetailsTimeoutRef.current) {
+        window.clearTimeout(closeDetailsTimeoutRef.current);
+      }
+      closeDetailsTimeoutRef.current = window.setTimeout(() => {
+        closeDetails();
+        isClosingTaskDetailsRef.current = false;
+        closeDetailsTimeoutRef.current = null;
+      }, 500);
+    } else if (action.type === "switch") {
+      // Clear dirty state first, then switch
+      setIsDirty(false);
+      pendingPatchRef.current = {};
+      isClosingTaskDetailsRef.current = false;
+      setPanelMode("taskDetails");
+      setIsPanelOpen(true);
+      openSidePanel(action.taskId);
+      // Note: snapshot will be captured in useEffect when selectedTask changes
+    }
+  }, [closeDetails, openSidePanel]);
+
+  // Unsaved changes modal handlers
+  const handleUnsavedModalSave = useCallback(async () => {
+    await commitPendingTaskEdits();
+    // Update snapshot to current saved state
+    if (selectedTask) {
+      taskSnapshotRef.current = { ...selectedTask };
+    }
+    setIsUnsavedModalOpen(false);
+    performPendingAction();
+  }, [commitPendingTaskEdits, performPendingAction, selectedTask]);
+
+  const handleUnsavedModalDiscard = useCallback(() => {
+    // Restore task from snapshot
+    if (taskSnapshotRef.current && selectedTaskId) {
+      actions.patchTaskLocal(selectedTaskId, taskSnapshotRef.current);
+    }
+    // Clear dirty state
+    setIsDirty(false);
+    pendingPatchRef.current = {};
+    setIsUnsavedModalOpen(false);
+    performPendingAction();
+  }, [performPendingAction, selectedTaskId, actions]);
+
+  const handleUnsavedModalCancel = useCallback(() => {
+    pendingActionRef.current = null;
+    setIsUnsavedModalOpen(false);
+  }, []);
+
+  // Guard for leaving task details - shows modal if dirty
+  const guardLeaveDetails = useCallback((action: { type: "close" } | { type: "switch"; taskId: string }): boolean => {
+    if (isDirty) {
+      pendingActionRef.current = action;
+      setIsUnsavedModalOpen(true);
+      return false; // Blocked - modal will handle it
+    }
+    return true; // Allowed to proceed
+  }, [isDirty]);
+
   const handleOpenDetailsSidePanel = (taskId: string) => {
+    // If switching to a different task while dirty, show the modal
+    if (selectedTaskId && selectedTaskId !== taskId && isDirty) {
+      if (!guardLeaveDetails({ type: "switch", taskId })) {
+        return;
+      }
+    }
+
+    // Clear dirty state when switching tasks (if not blocked by guard)
+    if (selectedTaskId && selectedTaskId !== taskId) {
+      setIsDirty(false);
+      pendingPatchRef.current = {};
+    }
+
     isClosingTaskDetailsRef.current = false;
     setPanelMode("taskDetails");
     setIsPanelOpen(true);
     openSidePanel(taskId);
   };
 
-  const handleOpenDetailsModal = (taskId: string) => {
-    setIsPanelOpen(false);
-    openModal(taskId);
-  };
-
-  const handleOpenDetailsPage = (taskId: string) => {
-    setIsPanelOpen(false);
-    openPage(taskId);
-  };
-
-  const handleCloseDetails = async () => {
-    if (settings.taskDetailsSaveMode === "manual") {
-      await commitPendingTaskEdits();
-    }
-    closeDetails();
-  };
-
   const handleManualSave = async () => {
     await commitPendingTaskEdits();
+    // Update snapshot to current saved state
+    if (selectedTask) {
+      taskSnapshotRef.current = { ...selectedTask };
+    }
     notify({
       title: "Changes saved",
       tone: "success",
-      duration: 2000,
     });
   };
 
@@ -501,211 +565,64 @@ export default function WeeklyView({
     };
   }, []);
 
-  // If in "page" mode, replace the entire view
-  if (detailsMode === "page" && selectedTask) {
-    const isManual = settings.taskDetailsSaveMode === "manual";
-    const detailsProps = {
-      onStatusChange: (s: TaskStatus) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { status: s });
-          pendingPatchRef.current.status = s;
-          setIsDirty(true);
-        } else {
-          actions.updateTaskStatus(selectedTask.id, s);
-        }
-      },
-      onTitleChange: (t: string) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { title: t });
-          pendingPatchRef.current.title = t;
-          setIsDirty(true);
-        } else {
-          actions.updateTaskTitle(selectedTask.id, t);
-        }
-      },
-      onTypeChange: (type: WeeklyItemType) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { type });
-          // Note: DB doesn't have type yet
-          setIsDirty(true);
-        } else {
-          actions.updateTaskType(selectedTask.id, type);
-        }
-      },
-      onGoalsChange: (goalIds: string[]) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { goalIds: goalIds.length > 0 ? goalIds : undefined });
-          // goalIds handled differently in useWeekState (local storage), 
-          // but for unified manual save we'd need backend support if it was there.
-          // For now we just mark dirty.
-          setIsDirty(true);
-        } else {
-          actions.setTaskGoals?.(selectedTask.id, goalIds);
-        }
-      },
-      onCompanionsChange: (cids: string[]) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { companionIds: cids });
-          setIsDirty(true);
-        } else {
-          actions.setTaskCompanions?.(selectedTask.id, cids);
-        }
-      },
-      onLinksChange: (links?: string) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { linksMarkdown: links });
-          pendingPatchRef.current.links = markdownToLinksJson(links);
-          setIsDirty(true);
-        } else {
-          actions.updateTaskLinks?.(selectedTask.id, links);
-        }
-      },
-      onNotesChange: (notes?: string) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { notesMarkdown: notes });
-          pendingPatchRef.current.notes = notes;
-          setIsDirty(true);
-        } else {
-          actions.updateTaskNotes?.(selectedTask.id, notes);
-        }
-      },
-      onLocationChange: (loc?: TaskLocation) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, { location: loc });
-          pendingPatchRef.current.location = loc || null;
-          setIsDirty(true);
-        } else {
-          actions.updateTaskLocation?.(selectedTask.id, loc);
-        }
-      },
-      onScheduleChange: (schedule: {
-        startDate?: string;
-        endDate?: string;
-        startTime?: string;
-        endTime?: string;
-      }) => {
-        if (isManual) {
-          actions.patchTaskLocal(selectedTask.id, schedule);
-          pendingPatchRef.current.start_date = schedule.startDate;
-          pendingPatchRef.current.end_date = schedule.endDate;
-          pendingPatchRef.current.start_time = schedule.startTime;
-          pendingPatchRef.current.end_time = schedule.endTime;
-          setIsDirty(true);
-        } else {
-          actions.updateTaskSchedule?.(selectedTask.id, schedule);
-        }
-      },
-      onDelete: handleDeleteTask,
-      // Manual save props
-      isDirty,
-      onSave: handleManualSave,
-    };
-
-    return (
-      <TaskDetailsFullPage
-        task={selectedTask}
-        goals={weekState.goals}
-        companions={weekState.companions}
-        recurrences={weekState.recurrences}
-        onBack={handleCloseDetails}
-        {...detailsProps}
-      />
-    );
-  }
-
-  const weekStartDateObj = new Date(weekState.weekStart);
-
   // Compute stats for the current week
   const weekStats = computeWeekStats(weekState);
   
-  const isManual = settings.taskDetailsSaveMode === "manual";
+  // Task details handlers - always use manual save mode
   const detailsProps = selectedTask
     ? {
         onStatusChange: (s: TaskStatus) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { status: s });
-            pendingPatchRef.current.status = s;
-            setIsDirty(true);
-          } else {
-            actions.updateTaskStatus(selectedTask.id, s);
-          }
+          actions.patchTaskLocal(selectedTask.id, { status: s });
+          pendingPatchRef.current.status = s;
+          setIsDirty(true);
         },
         onTitleChange: (t: string) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { title: t });
-            pendingPatchRef.current.title = t;
-            setIsDirty(true);
-          } else {
-            actions.updateTaskTitle(selectedTask.id, t);
-          }
+          actions.patchTaskLocal(selectedTask.id, { title: t });
+          pendingPatchRef.current.title = t;
+          setIsDirty(true);
         },
         onTypeChange: (type: WeeklyItemType) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { type });
-            setIsDirty(true);
-          } else {
-            actions.updateTaskType(selectedTask.id, type);
-          }
+          actions.patchTaskLocal(selectedTask.id, { type });
+          pendingPatchRef.current.task_type_id = type;
+          setIsDirty(true);
         },
         onGoalsChange: (goalIds: string[]) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { goalIds: goalIds.length > 0 ? goalIds : undefined });
-            setIsDirty(true);
-          } else {
-            actions.setTaskGoals?.(selectedTask.id, goalIds);
-          }
+          // Goals are local-only (not persisted to backend yet), so just patch locally
+          actions.patchTaskLocal(selectedTask.id, { goalIds: goalIds.length > 0 ? goalIds : undefined });
+          setIsDirty(true);
         },
         onCompanionsChange: (cids: string[]) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { companionIds: cids });
-            setIsDirty(true);
-          } else {
-            actions.setTaskCompanions?.(selectedTask.id, cids);
-          }
+          // Companions are local-only (not persisted to backend yet), so just patch locally
+          actions.patchTaskLocal(selectedTask.id, { companionIds: cids });
+          setIsDirty(true);
         },
         onLinksChange: (links?: string) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { linksMarkdown: links });
-            pendingPatchRef.current.links = markdownToLinksJson(links);
-            setIsDirty(true);
-          } else {
-            actions.updateTaskLinks?.(selectedTask.id, links);
-          }
+          actions.patchTaskLocal(selectedTask.id, { linksMarkdown: links });
+          pendingPatchRef.current.links = markdownToLinksJson(links);
+          setIsDirty(true);
         },
         onNotesChange: (notes?: string) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { notesMarkdown: notes });
-            pendingPatchRef.current.notes = notes;
-            setIsDirty(true);
-          } else {
-            actions.updateTaskNotes?.(selectedTask.id, notes);
-          }
+          actions.patchTaskLocal(selectedTask.id, { notesMarkdown: notes });
+          pendingPatchRef.current.notes = notes;
+          setIsDirty(true);
         },
         onLocationChange: (loc?: TaskLocation) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, { location: loc });
-            pendingPatchRef.current.location = loc || null;
-            setIsDirty(true);
-          } else {
-            actions.updateTaskLocation?.(selectedTask.id, loc);
-          }
+          actions.patchTaskLocal(selectedTask.id, { location: loc });
+          pendingPatchRef.current.location = loc || null;
+          setIsDirty(true);
         },
         onScheduleChange: (schedule: {
-          startDate?: string;
-          endDate?: string;
-          startTime?: string;
-          endTime?: string;
+          startDate?: string | null;
+          endDate?: string | null;
+          startTime?: string | null;
+          endTime?: string | null;
         }) => {
-          if (isManual) {
-            actions.patchTaskLocal(selectedTask.id, schedule);
-            pendingPatchRef.current.start_date = schedule.startDate;
-            pendingPatchRef.current.end_date = schedule.endDate;
-            pendingPatchRef.current.start_time = schedule.startTime;
-            pendingPatchRef.current.end_time = schedule.endTime;
-            setIsDirty(true);
-          } else {
-            actions.updateTaskSchedule?.(selectedTask.id, schedule);
-          }
+          actions.patchTaskLocal(selectedTask.id, schedule);
+          if (schedule.startDate !== undefined) pendingPatchRef.current.start_date = schedule.startDate;
+          if (schedule.endDate !== undefined) pendingPatchRef.current.end_date = schedule.endDate;
+          if (schedule.startTime !== undefined) pendingPatchRef.current.start_time = schedule.startTime;
+          if (schedule.endTime !== undefined) pendingPatchRef.current.end_time = schedule.endTime;
+          setIsDirty(true);
         },
         onRecurrenceChange: (
           rule: Omit<
@@ -799,8 +716,6 @@ export default function WeeklyView({
                 onDeleteGroup={actions.deleteGroup}
                 // Pass details handlers
                 onOpenDetailsSidePanel={handleOpenDetailsSidePanel}
-                onOpenDetailsModal={handleOpenDetailsModal}
-                onOpenDetailsPage={handleOpenDetailsPage}
                 // Day clipboard handlers
                 onCopyDay={handleCopyDay}
                 onPasteDay={handlePasteDay}
@@ -841,24 +756,14 @@ export default function WeeklyView({
           ) : panelMode === "taskDetails" ? (
             <button
               type="button"
-              onClick={
-                settings.taskDetailsSaveMode === "manual" && isDirty
-                  ? handleManualSave
-                  : undefined
-              }
-              disabled={settings.taskDetailsSaveMode !== "manual" || !isDirty}
+              onClick={isDirty ? handleManualSave : undefined}
+              disabled={!isDirty}
               className={`p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
-                settings.taskDetailsSaveMode === "manual" && isDirty
+                isDirty
                   ? "text-indigo-400 hover:text-indigo-300 hover:bg-slate-800"
                   : "text-slate-500 opacity-40 cursor-default"
               }`}
-              title={
-                settings.taskDetailsSaveMode === "manual"
-                  ? isDirty
-                    ? "Save changes"
-                    : "No pending changes"
-                  : "Autosave enabled"
-              }
+              title={isDirty ? "Save changes" : "No pending changes"}
               aria-label="Save changes"
             >
               <IconCheck size={16} />
@@ -866,12 +771,14 @@ export default function WeeklyView({
           ) : null
         }
         isOpen={isPanelOpen}
-        onClose={async () => {
+        onClose={() => {
           if (panelMode === "taskDetails") {
-            isClosingTaskDetailsRef.current = true;
-            if (settings.taskDetailsSaveMode === "manual") {
-              await commitPendingTaskEdits();
+            // Check if dirty - if so, show unsaved changes modal
+            if (!guardLeaveDetails({ type: "close" })) {
+              return; // Blocked by guard - modal is now open
             }
+            // Not dirty, proceed with close
+            isClosingTaskDetailsRef.current = true;
           }
           setIsPanelOpen(false);
 
@@ -912,23 +819,18 @@ export default function WeeklyView({
         )}
       </RightSidePanel>
 
-      {/* Task Details Modal */}
-      {detailsMode === "modal" && selectedTask && detailsProps && (
-        <TaskDetailsModal
-          isOpen={true}
-          onClose={handleCloseDetails}
-          task={selectedTask}
-          goals={weekState.goals}
-          companions={weekState.companions}
-          {...detailsProps}
-        />
-      )}
-
       <DeleteRecurrenceModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onDeleteThis={handleConfirmDeleteThis}
         onDeleteAll={handleConfirmDeleteAll}
+      />
+
+      <UnsavedChangesModal
+        isOpen={isUnsavedModalOpen}
+        onClose={handleUnsavedModalCancel}
+        onSave={handleUnsavedModalSave}
+        onDiscard={handleUnsavedModalDiscard}
       />
 
       {/* Week Actions Menu */}

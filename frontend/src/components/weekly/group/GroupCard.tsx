@@ -23,8 +23,6 @@ interface GroupCardProps {
   onDeleteTask: (id: string) => void;
   onCopyTask?: (id: string) => void;
   onOpenDetailsSidePanel?: (taskId: string) => void;
-  onOpenDetailsModal?: (taskId: string) => void;
-  onOpenDetailsPage?: (taskId: string) => void;
   highlightTaskId?: string | null;
 }
 
@@ -39,9 +37,8 @@ export default function GroupCard({
   onUpdateTaskStatus,
   onUpdateTaskTitle,
   onDeleteTask,
+  onCopyTask,
   onOpenDetailsSidePanel,
-  onOpenDetailsModal,
-  onOpenDetailsPage,
   highlightTaskId,
 }: GroupCardProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -187,8 +184,6 @@ export default function GroupCard({
                 onDelete={onDeleteTask}
                 onCopy={onCopyTask}
                 onOpenDetailsSidePanel={onOpenDetailsSidePanel}
-                onOpenDetailsModal={onOpenDetailsModal}
-                onOpenDetailsPage={onOpenDetailsPage}
               />
             </div>
           ))}

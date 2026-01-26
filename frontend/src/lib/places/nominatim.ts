@@ -41,6 +41,32 @@ export interface SearchOptions {
 }
 
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org/search";
+const EARTH_RADIUS_KM = 6371;
+
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const lat1Rad = toRadians(lat1);
+  const lat2Rad = toRadians(lat2);
+  const deltaLat = toRadians(lat2 - lat1);
+  const deltaLng = toRadians(lng2 - lng1);
+
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(lat1Rad) *
+      Math.cos(lat2Rad) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * c;
+}
 
 // Format a place into a user-friendly label
 function formatPlaceLabel(place: NominatimPlace): {
@@ -98,20 +124,29 @@ export async function searchPlaces(
     return [];
   }
 
+  const hasPosition = lat !== undefined && lng !== undefined;
+  const requestedLimit = hasPosition
+    ? Math.min(Math.max(limit * 4, 10), 40)
+    : limit;
+
   const params = new URLSearchParams({
     q: query,
     format: "json",
     addressdetails: "1",
-    limit: String(limit),
+    limit: String(requestedLimit),
   });
 
   // Add location bias if available (viewbox around user location)
-  if (lat !== undefined && lng !== undefined) {
-    // Create a bounding box around the user's location (~50km radius)
-    const delta = 0.5; // roughly 50km at mid-latitudes
-    const viewbox = [lng - delta, lat + delta, lng + delta, lat - delta].join(
-      ","
-    );
+  if (hasPosition) {
+    const radiusKm = 50;
+    const latDelta = radiusKm / 111.32;
+    const lngDelta = radiusKm / (111.32 * Math.max(Math.cos(toRadians(lat)), 0.01));
+    const viewbox = [
+      lng - lngDelta,
+      lat + latDelta,
+      lng + lngDelta,
+      lat - latDelta,
+    ].join(",");
     params.set("viewbox", viewbox);
     params.set("bounded", "0"); // Prefer results in viewbox but don't exclude others
   }
@@ -132,7 +167,22 @@ export async function searchPlaces(
 
   const data: NominatimPlace[] = await response.json();
 
-  return data.map((place) => {
+  const sorted = hasPosition
+    ? data
+        .map((place) => {
+          const placeLat = parseFloat(place.lat);
+          const placeLng = parseFloat(place.lon);
+          return {
+            place,
+            distanceKm: haversineKm(lat, lng, placeLat, placeLng),
+          };
+        })
+        .sort((a, b) => a.distanceKm - b.distanceKm)
+        .slice(0, limit)
+        .map(({ place }) => place)
+    : data;
+
+  return sorted.map((place) => {
     const { label, secondaryLabel } = formatPlaceLabel(place);
     return {
       id: place.place_id,

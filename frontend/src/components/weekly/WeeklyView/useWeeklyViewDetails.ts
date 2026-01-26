@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-type DetailsMode = "side-panel" | "modal" | "page" | null;
+type DetailsMode = "side-panel" | null;
 
 interface UseWeeklyViewDetailsArgs {
   openTaskId?: string | null;
@@ -20,16 +20,6 @@ export function useWeeklyViewDetails({
   const openSidePanel = (taskId: string) => {
     setSelectedTaskId(taskId);
     setDetailsMode("side-panel");
-  };
-
-  const openModal = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    setDetailsMode("modal");
-  };
-
-  const openPage = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    setDetailsMode("page");
   };
 
   const closeDetails = () => {
@@ -56,8 +46,6 @@ export function useWeeklyViewDetails({
     detailsMode,
     highlightedTaskId,
     openSidePanel,
-    openModal,
-    openPage,
     closeDetails,
     setHighlightedTaskId,
   };

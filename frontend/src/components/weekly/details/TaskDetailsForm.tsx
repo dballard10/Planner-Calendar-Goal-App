@@ -25,10 +25,10 @@ import {
 import { useAppSettings } from "../../../context/AppSettingsContext";
 
 interface TaskDetailsFormValues {
-  startDate?: string;
-  endDate?: string;
-  startTime?: string;
-  endTime?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   notesMarkdown?: string;
   location?: TaskLocation;
   people?: string;
@@ -100,6 +100,8 @@ export default function TaskDetailsForm({
     lat: number;
     lng: number;
   } | null>(null);
+  const lastSearchQueryRef = useRef("");
+  const lastSearchUsedPositionRef = useRef(false);
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -232,6 +234,8 @@ export default function TaskDetailsForm({
       abortControllerRef.current = controller;
 
       setIsSearching(true);
+      lastSearchQueryRef.current = query;
+      lastSearchUsedPositionRef.current = Boolean(userPosition);
 
       try {
         const results = await searchPlaces(query, {
@@ -272,7 +276,7 @@ export default function TaskDetailsForm({
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    debounceTimeoutRef.current = setTimeout(() => {
+    debounceTimeoutRef.current = window.setTimeout(() => {
       performSearch(value);
     }, 300);
   };
@@ -292,6 +296,20 @@ export default function TaskDetailsForm({
       setIsDropdownOpen(true);
     }
   };
+
+  useEffect(() => {
+    if (
+      !settings.locationEnabled ||
+      !userPosition ||
+      !locationQuery.trim() ||
+      lastSearchUsedPositionRef.current ||
+      lastSearchQueryRef.current !== locationQuery
+    ) {
+      return;
+    }
+
+    performSearch(locationQuery);
+  }, [locationQuery, performSearch, settings.locationEnabled, userPosition]);
 
   const handleLocationBlur = (e: React.FocusEvent) => {
     // Delay closing to allow click on suggestion

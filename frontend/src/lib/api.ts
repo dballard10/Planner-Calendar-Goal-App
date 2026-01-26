@@ -12,6 +12,7 @@ export interface TaskRow {
   created_at: string;
   title: string;
   status: string;
+  task_type_id: string;
   assigned_date: string;
   position: number;
   notes: string | null;
@@ -33,6 +34,7 @@ export interface TaskCreate {
   assigned_date: string;
   position: number;
   status?: string;
+  task_type_id?: string;
   notes?: string;
   links?: Array<{ label?: string; url: string }>;
 }
@@ -40,6 +42,7 @@ export interface TaskCreate {
 export interface TaskUpdate {
   title?: string;
   status?: string;
+  task_type_id?: string;
   notes?: string;
   start_date?: string | null;
   end_date?: string | null;

@@ -1,14 +1,10 @@
-import { IconArrowLeft, IconDeviceFloppy, IconClick } from "@tabler/icons-react";
-import { useAppSettings, useSetAppSettings } from "../../context/AppSettingsContext";
+import { IconArrowLeft, IconDeviceFloppy, IconCheck, IconAlertTriangle } from "@tabler/icons-react";
 
 interface EditingAndSavingSettingsPageProps {
   onBack: () => void;
 }
 
 export function EditingAndSavingSettingsPage({ onBack }: EditingAndSavingSettingsPageProps) {
-  const settings = useAppSettings();
-  const { setTaskDetailsSaveMode } = useSetAppSettings();
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
@@ -29,55 +25,41 @@ export function EditingAndSavingSettingsPage({ onBack }: EditingAndSavingSetting
               <IconDeviceFloppy className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-medium text-slate-100">Task Details Save Mode</h3>
+              <h3 className="text-lg font-medium text-slate-100">Task Details Saving</h3>
               <p className="text-sm text-slate-400">
-                Choose how changes are saved when editing task details.
+                Changes to task details require explicit saving. You have full control over when changes are committed.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              onClick={() => setTaskDetailsSaveMode("autosave")}
-              className={`flex flex-col gap-2 p-4 rounded-xl border-2 transition-all text-left ${
-                settings.taskDetailsSaveMode === "autosave"
-                  ? "bg-blue-500/10 border-blue-500/50 ring-1 ring-blue-500/50"
-                  : "bg-slate-800/30 border-slate-700/50 hover:border-slate-600 hover:bg-slate-800/50"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${
-                  settings.taskDetailsSaveMode === "autosave" ? "bg-blue-500 text-white" : "bg-slate-700 text-slate-300"
-                }`}>
-                  <IconClick className="w-4 h-4" />
+          <div className="space-y-4">
+            <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-1 p-1.5 rounded-lg bg-indigo-500 text-white">
+                  <IconCheck className="w-4 h-4" />
                 </div>
-                <span className="font-semibold text-slate-100 text-sm">Autosave</span>
+                <div className="space-y-1">
+                  <p className="font-semibold text-slate-100 text-sm">Manual Save</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Changes are buffered locally while you edit. Click the checkmark icon in the Task Details header to save all changes to the backend at once.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Changes are saved to the backend immediately as you type or change fields.
-              </p>
-            </button>
+            </div>
 
-            <button
-              onClick={() => setTaskDetailsSaveMode("manual")}
-              className={`flex flex-col gap-2 p-4 rounded-xl border-2 transition-all text-left ${
-                settings.taskDetailsSaveMode === "manual"
-                  ? "bg-indigo-500/10 border-indigo-500/50 ring-1 ring-indigo-500/50"
-                  : "bg-slate-800/30 border-slate-700/50 hover:border-slate-600 hover:bg-slate-800/50"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${
-                  settings.taskDetailsSaveMode === "manual" ? "bg-indigo-500 text-white" : "bg-slate-700 text-slate-300"
-                }`}>
-                  <IconDeviceFloppy className="w-4 h-4" />
+            <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-1 p-1.5 rounded-lg bg-amber-500 text-white">
+                  <IconAlertTriangle className="w-4 h-4" />
                 </div>
-                <span className="font-semibold text-slate-100 text-sm">Manual Save</span>
+                <div className="space-y-1">
+                  <p className="font-semibold text-slate-100 text-sm">Unsaved Changes Prompt</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    If you try to close the panel or switch to another task with unsaved changes, you will be prompted to Save, Discard, or Cancel.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Changes are buffered locally. Click the checkmark or click off to save to the backend.
-              </p>
-            </button>
+            </div>
           </div>
         </section>
       </div>

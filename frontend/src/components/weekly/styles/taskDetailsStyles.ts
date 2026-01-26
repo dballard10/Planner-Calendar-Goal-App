@@ -1,11 +1,3 @@
-export const TASK_DETAILS_PAGE_CONTAINER =
-  "flex flex-col h-full bg-slate-950 animate-in fade-in slide-in-from-bottom-4 duration-300";
-export const TASK_DETAILS_PAGE_HEADER =
-  "sticky top-0 z-10 flex items-center gap-4 p-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur";
-export const TASK_DETAILS_PAGE_HEADER_BUTTON =
-  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 bg-slate-900 border border-slate-700 rounded hover:bg-slate-800 hover:text-slate-100 transition-colors";
-export const TASK_DETAILS_PAGE_CONTENT_WRAPPER = "flex-1 overflow-y-auto";
-
 export const TASK_DETAILS_ROOT = "flex flex-col h-full";
 export const TASK_DETAILS_HEADER =
   "top-0 z-10 flex flex-col gap-4 border-b-2 border-slate-700/80 bg-slate-900/95 backdrop-blur-sm px-4 pt-4 pb-4";
@@ -36,8 +28,8 @@ export const TASK_GOAL_SELECTOR_LABEL =
   "flex items-center gap-2 text-sm font-medium text-slate-400";
 export const TASK_SELECTOR_TRIGGER =
   "w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 outline-none hover:border-slate-600 cursor-pointer flex items-center justify-between transition-colors min-h-[38px] focus:ring-1 focus:outline-none";
-export const TASK_GOAL_TRIGGER = `${TASK_SELECTOR_TRIGGER} focus:border-emerald-500 focus:ring-emerald-500/40`;
-export const TASK_COMPANION_TRIGGER = `${TASK_SELECTOR_TRIGGER} focus:border-orange-500 focus:ring-orange-500/40`;
+export const TASK_GOAL_TRIGGER = `${TASK_SELECTOR_TRIGGER} border-slate-600 focus:border-emerald-500 focus:ring-emerald-500/40`;
+export const TASK_COMPANION_TRIGGER = `${TASK_SELECTOR_TRIGGER} border-slate-600 focus:border-orange-500 focus:ring-orange-500/40`;
 export const TASK_SELECTOR_DROPDOWN =
   "absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto z-30 ring-1 ring-slate-800 animate-in fade-in zoom-in-95 duration-100";
 export const TASK_GOAL_DROPDOWN = TASK_SELECTOR_DROPDOWN;

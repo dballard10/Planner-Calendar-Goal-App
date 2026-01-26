@@ -13,14 +13,12 @@ const DEFAULT_ITEM_TYPE_COLORS: Record<WeeklyItemType, string> = {
 export interface AppSettings {
   itemTypeColors: Record<WeeklyItemType, string>;
   locationEnabled: boolean;
-  taskDetailsSaveMode: "autosave" | "manual";
 }
 
 interface AppSettingsContextValue {
   settings: AppSettings;
   setItemTypeColor: (type: WeeklyItemType, color: string) => void;
   setLocationEnabled: (enabled: boolean) => void;
-  setTaskDetailsSaveMode: (mode: "autosave" | "manual") => void;
 }
 
 const AppSettingsContext = createContext<AppSettingsContextValue | null>(null);
@@ -28,7 +26,6 @@ const AppSettingsContext = createContext<AppSettingsContextValue | null>(null);
 const DEFAULT_SETTINGS: AppSettings = {
   itemTypeColors: DEFAULT_ITEM_TYPE_COLORS,
   locationEnabled: true,
-  taskDetailsSaveMode: "manual",
 };
 
 interface AppSettingsProviderProps {
@@ -41,7 +38,13 @@ export function AppSettingsProvider({ children }: AppSettingsProviderProps) {
     const saved = localStorage.getItem("app_settings_v1");
     if (saved) {
       try {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        // Sanitize: only keep known keys from DEFAULT_SETTINGS
+        const sanitized = { ...DEFAULT_SETTINGS };
+        if (parsed.itemTypeColors) sanitized.itemTypeColors = parsed.itemTypeColors;
+        if (typeof parsed.locationEnabled === "boolean") sanitized.locationEnabled = parsed.locationEnabled;
+        // Note: taskDetailsSaveMode was removed - now always uses manual save
+        return sanitized;
       } catch (e) {
         console.error("Failed to parse app settings", e);
       }
@@ -74,16 +77,9 @@ export function AppSettingsProvider({ children }: AppSettingsProviderProps) {
     }));
   }, [setSettingsAndPersist]);
 
-  const setTaskDetailsSaveMode = useCallback((mode: "autosave" | "manual") => {
-    setSettingsAndPersist((prev) => ({
-      ...prev,
-      taskDetailsSaveMode: mode,
-    }));
-  }, [setSettingsAndPersist]);
-
   return (
     <AppSettingsContext.Provider
-      value={{ settings, setItemTypeColor, setLocationEnabled, setTaskDetailsSaveMode }}
+      value={{ settings, setItemTypeColor, setLocationEnabled }}
     >
       {children}
     </AppSettingsContext.Provider>
@@ -106,7 +102,6 @@ export function useSetAppSettings() {
   return {
     setItemTypeColor: context.setItemTypeColor,
     setLocationEnabled: context.setLocationEnabled,
-    setTaskDetailsSaveMode: context.setTaskDetailsSaveMode,
   };
 }
 
@@ -118,7 +113,8 @@ export function getItemTypeColor(
   return settings.itemTypeColors[type] ?? DEFAULT_ITEM_TYPE_COLORS[type];
 }
 
-// @ts-expect-error - Vite specific hot module replacement
+// Vite specific hot module replacement
+// @ts-ignore - import.meta.hot is Vite specific
 if (import.meta.hot) {
   import.meta.hot.decline();
 }

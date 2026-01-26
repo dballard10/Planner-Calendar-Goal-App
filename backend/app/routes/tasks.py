@@ -95,6 +95,7 @@ def get_week_tasks(week_start_iso: str):
             created_at=row["created_at"],
             title=row["title"],
             status=row.get("status", "open"),
+            task_type_id=row.get("task_type_id", "task"),
             assigned_date=row["assigned_date"],
             position=row.get("position", 0),
             notes=row.get("notes"),
@@ -165,6 +166,7 @@ def create_task(payload: TaskCreate):
         "assigned_date": format_date_iso(payload.assigned_date),
         "position": payload.position,
         "status": payload.status,
+        "task_type_id": payload.task_type_id or "task",
         "notes": payload.notes or "",
         "links": payload.links,
     }
@@ -180,6 +182,7 @@ def create_task(payload: TaskCreate):
         created_at=row["created_at"],
         title=row["title"],
         status=row.get("status", "open"),
+        task_type_id=row.get("task_type_id", "task"),
         assigned_date=row["assigned_date"],
         position=row.get("position", 0),
         notes=row.get("notes"),
@@ -199,41 +202,35 @@ def update_task(task_id: str, payload: TaskUpdate):
     """
     Update an existing task.
     Only provided fields are updated.
+    Supports clearing fields by passing null.
     """
     supabase = get_supabase()
 
-    # Build update dict from non-None fields
+    # Get only fields that were explicitly set in the request
+    # This allows us to distinguish between a field not being provided (None)
+    # and a field being explicitly set to null (None in Pydantic, but present in set)
+    provided_fields = payload.model_dump(exclude_unset=True)
+
+    if not provided_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
     update_data: dict = {}
 
-    if payload.title is not None:
-        update_data["title"] = payload.title
-    if payload.status is not None:
-        update_data["status"] = payload.status
-    if payload.notes is not None:
-        update_data["notes"] = payload.notes
-    if payload.start_date is not None:
-        update_data["start_date"] = format_date_iso(payload.start_date)
-    if payload.end_date is not None:
-        update_data["end_date"] = format_date_iso(payload.end_date)
-    if payload.start_time is not None:
-        update_data["start_time"] = payload.start_time
-    if payload.end_time is not None:
-        update_data["end_time"] = payload.end_time
-    if payload.links is not None:
-        update_data["links"] = payload.links
-    if payload.location is not None:
-        # Convert Pydantic model to dict if needed
-        if hasattr(payload.location, "model_dump"):
-            update_data["location"] = payload.location.model_dump()
+    # Map frontend camelCase/snake_case if needed, and format dates
+    for field, value in provided_fields.items():
+        if field in ["start_date", "end_date", "assigned_date"] and value is not None:
+            # value is a date object from Pydantic validation
+            update_data[field] = format_date_iso(value)
+        elif field == "location" and value is not None:
+            # Handle TaskLocation model or dict
+            if hasattr(value, "model_dump"):
+                update_data["location"] = value.model_dump()
+            else:
+                update_data["location"] = value
         else:
-            update_data["location"] = payload.location
-    if payload.position is not None:
-        update_data["position"] = payload.position
-    if payload.assigned_date is not None:
-        update_data["assigned_date"] = format_date_iso(payload.assigned_date)
-
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No fields to update")
+            # For all other fields (title, status, notes, start_time, end_time, links, position)
+            # and for any date field that IS null
+            update_data[field] = value
 
     response = supabase.table("tasks").update(update_data).eq("id", task_id).execute()
 
@@ -246,6 +243,7 @@ def update_task(task_id: str, payload: TaskUpdate):
         created_at=row["created_at"],
         title=row["title"],
         status=row.get("status", "open"),
+        task_type_id=row.get("task_type_id", "task"),
         assigned_date=row["assigned_date"],
         position=row.get("position", 0),
         notes=row.get("notes"),

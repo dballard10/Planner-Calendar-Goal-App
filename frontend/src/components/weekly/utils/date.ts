@@ -30,10 +30,10 @@ export function getNext30MinBlock(): string {
 }
 
 export interface ScheduleValues {
-  startDate?: string;
-  endDate?: string;
-  startTime?: string;
-  endTime?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 /**

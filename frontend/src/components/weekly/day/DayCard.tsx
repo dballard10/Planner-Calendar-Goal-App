@@ -42,8 +42,6 @@ interface DayCardProps {
   onUpdateGroupTitle: (groupId: string, title: string) => void;
   onDeleteGroup: (groupId: string) => void;
   onOpenDetailsSidePanel?: (taskId: string) => void;
-  onOpenDetailsModal?: (taskId: string) => void;
-  onOpenDetailsPage?: (taskId: string) => void;
   highlightTaskId?: string | null;
   // Day clipboard actions
   onCopyDay: (dayIndex: number) => void;
@@ -70,8 +68,6 @@ export default function DayCard({
   onUpdateGroupTitle,
   onDeleteGroup,
   onOpenDetailsSidePanel,
-  onOpenDetailsModal,
-  onOpenDetailsPage,
   highlightTaskId,
   onCopyDay,
   onPasteDay,
@@ -294,8 +290,6 @@ export default function DayCard({
                   onUpdateTaskTitle={onUpdateTaskTitle}
                   onDeleteTask={onDeleteTask}
                   onOpenDetailsSidePanel={onOpenDetailsSidePanel}
-                  onOpenDetailsModal={onOpenDetailsModal}
-                  onOpenDetailsPage={onOpenDetailsPage}
                 />
               </motion.div>
             );
@@ -324,8 +318,6 @@ export default function DayCard({
                   onDelete={onDeleteTask}
                   onCopy={onCopyTask}
                   onOpenDetailsSidePanel={onOpenDetailsSidePanel}
-                  onOpenDetailsModal={onOpenDetailsModal}
-                  onOpenDetailsPage={onOpenDetailsPage}
                 />
               </motion.div>
             </div>

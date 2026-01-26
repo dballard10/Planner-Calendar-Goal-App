@@ -138,7 +138,7 @@ export function useWeekState() {
 
       const mappedTasks: Task[] = tasks.map(row => ({
         id: row.id,
-        type: "task", // Default for now
+        type: (row.task_type_id as WeeklyItemType) || "task",
         title: row.title,
         status: row.status as TaskStatus,
         dayIndex: getDayIndex(row.assigned_date, weekStart),
@@ -257,6 +257,7 @@ export function useWeekState() {
         assigned_date: assignedDate,
         position: newPosition,
         status: "open",
+        task_type_id: "task",
         notes: "",
         links: [],
       });
@@ -332,14 +333,21 @@ export function useWeekState() {
     }
   };
 
-  const updateTaskType = (id: string, type: WeeklyItemType) => {
+  const updateTaskType = async (id: string, type: WeeklyItemType) => {
+    // Optimistic UI update
     setWeekSpecificState((prev) => ({
       ...prev,
       tasks: prev.tasks.map((task) =>
         task.id === id ? { ...task, type } : task
       ),
     }));
-    // Note: DB doesn't have type column yet, so this is UI-only for now
+
+    try {
+      await api.updateTask(id, { task_type_id: type });
+    } catch (error) {
+      console.error("Error updating task type:", error);
+      fetchWeekTasks(weekSpecificState.weekStart);
+    }
   };
 
   const updateTaskLinks = async (id: string, linksMarkdown?: string) => {
@@ -524,10 +532,10 @@ export function useWeekState() {
   const updateTaskSchedule = async (
     taskId: string,
     schedule: {
-      startDate?: string;
-      endDate?: string;
-      startTime?: string;
-      endTime?: string;
+      startDate?: string | null;
+      endDate?: string | null;
+      startTime?: string | null;
+      endTime?: string | null;
     }
   ) => {
     setWeekSpecificState((prev) => ({

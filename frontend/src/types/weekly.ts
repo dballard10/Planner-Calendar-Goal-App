@@ -92,10 +92,10 @@ export interface Task {
   recurrenceId?: string;
   occurrenceDateISO?: string;
   // Schedule fields
-  startDate?: string; // ISO YYYY-MM-DD
-  endDate?: string;   // ISO YYYY-MM-DD
-  startTime?: string; // 24h HH:mm
-  endTime?: string;   // 24h HH:mm
+  startDate?: string | null; // ISO YYYY-MM-DD
+  endDate?: string | null;   // ISO YYYY-MM-DD
+  startTime?: string | null; // 24h HH:mm
+  endTime?: string | null;   // 24h HH:mm
 }
 
 export interface Group {
