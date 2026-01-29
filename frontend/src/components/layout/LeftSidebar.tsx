@@ -20,7 +20,7 @@ interface LeftSidebarProps {
 // Let's go with a composed Sun/Moon split icon.
 const AgniFlameLogo = ({ className }: { className?: string }) => (
   <img 
-    src="/public/logos/agni-flame-logo.png"
+    src="/logos/agni-flame-logo.png"
     alt="Agni Flame"
     className={className}
   />

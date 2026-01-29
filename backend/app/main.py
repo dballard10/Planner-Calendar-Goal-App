@@ -9,8 +9,8 @@ from app.settings import settings
 from app.routes import tasks
 
 app = FastAPI(
-    title="Planner Calendar Goal API",
-    description="Backend API for the Planner & Calendar app",
+    title="Agni API",
+    description="Backend API for the Agni app",
     version="1.0.0",
 )
 
