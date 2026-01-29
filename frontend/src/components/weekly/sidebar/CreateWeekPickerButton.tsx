@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconCalendarPlus } from "@tabler/icons-react";
 import DateInputWithPicker from "../../ui/DateInputWithPicker";

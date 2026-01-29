@@ -17,12 +17,13 @@ import DayCardSettings, {
 import GroupCard from "../group/GroupCard";
 import { ITEM_TYPE_PRIORITIES } from "../../../lib/itemTypeConfig";
 
-// Status priority: completed first, then cancelled, failed, open last
+// Status priority: completed first, then cancelled, failed, moved, open last
 const STATUS_RANK: Record<TaskStatus, number> = {
   completed: 0,
   cancelled: 1,
   failed: 2,
-  open: 3,
+  moved: 3,
+  open: 4,
 };
 
 interface DayCardProps {

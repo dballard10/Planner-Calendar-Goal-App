@@ -21,10 +21,13 @@ export function markdownToLinksJson(markdown: string | undefined): LinkEntry[] {
     .map(line => {
       const parsed = parseLinkLine(line);
       if (!parsed) return null;
-      return {
-        label: parsed.label === parsed.url ? undefined : parsed.label,
+      const entry: LinkEntry = {
         url: parsed.url,
       };
+      if (parsed.label && parsed.label !== parsed.url) {
+        entry.label = parsed.label;
+      }
+      return entry;
     })
     .filter((entry): entry is LinkEntry => entry !== null);
 }

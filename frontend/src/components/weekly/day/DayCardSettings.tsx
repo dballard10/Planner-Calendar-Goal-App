@@ -58,6 +58,7 @@ const STATUS_ICON_MAP: Record<
   completed: { icon: IconCircleCheck, className: "text-emerald-400" },
   cancelled: { icon: IconCircleMinus, className: "text-yellow-400" },
   failed: { icon: IconCircleX, className: "text-red-400" },
+  moved: { icon: IconCircle, className: "text-amber-400" },
 };
 
 const SORT_OPTIONS: Array<{ value: DaySortMode; label: string }> = [

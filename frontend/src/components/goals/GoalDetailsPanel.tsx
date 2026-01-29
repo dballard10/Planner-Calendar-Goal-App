@@ -14,6 +14,7 @@ const STATUS_BADGES: Record<TaskStatus, string> = {
   completed: "bg-emerald-700/70 text-emerald-400",
   failed: "bg-rose-700/70 text-rose-400",
   cancelled: "bg-slate-700/70 text-slate-400",
+  moved: "bg-amber-700/70 text-amber-400",
 };
 
 const formatPercentage = (value: number) => `${value}%`;

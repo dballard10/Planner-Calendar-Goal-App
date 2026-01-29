@@ -5,7 +5,7 @@ export type MarkdownTaskStatusToken = "[ ]" | "[x]" | "[>]" | "[-]" | "[?]";
 export interface MarkdownTask {
   status: TaskStatus;
   title: string;
-  type: WeeklyItemType;
+  type?: WeeklyItemType;
 }
 
 export const taskStatusToToken = (
@@ -43,7 +43,6 @@ export const tokenToTaskStatus = (token: string): TaskStatus => {
 };
 
 const TASK_LINE_REGEX = /^(\s*)([-*])\s+\[( |x|>|\-|\?)\]\s+(.*)$/;
-const GROUP_HEADER_REGEX = /^#{4}\s+Group:\s+(.*)$/;
 
 const TYPE_MARKER_REGEX = /^\[(task|event|birthday|holiday)\]\s+/i;
 
@@ -358,7 +357,7 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
 
       tasks.push({
         id: getOrCreateId(),
-        type: parsed.type,
+        type: parsed.type ?? "task",
         title: parsed.title,
         status: parsed.status,
         dayIndex: currentDayIndex,
@@ -390,5 +389,7 @@ export const parseWeeklyMarkdown = (markdown: string): WeekState => {
     weekStart,
     tasks,
     groups,
+    goals: [],
+    companions: [],
   };
 };

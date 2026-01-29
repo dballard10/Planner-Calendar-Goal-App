@@ -1,4 +1,4 @@
-export type TaskStatus = "open" | "completed" | "cancelled" | "failed";
+export type TaskStatus = "open" | "completed" | "cancelled" | "failed" | "moved";
 
 export type WeeklyItemType = "task" | "event" | "birthday" | "holiday";
 

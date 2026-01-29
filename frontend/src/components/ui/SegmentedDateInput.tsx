@@ -213,7 +213,7 @@ export default function SegmentedDateInput({
     setTimeout(() => selectSegment(0), 0);
   };
 
-  const handleClick = (e: React.MouseEvent<HTMLInputElement>) => {
+  const handleClick = (_e: React.MouseEvent<HTMLInputElement>) => {
     if (!displayValue) setDisplayValue(TEMPLATE_VALUE);
     // On click, snap selection to the clicked segment
     const pos = inputRef.current?.selectionStart ?? 0;

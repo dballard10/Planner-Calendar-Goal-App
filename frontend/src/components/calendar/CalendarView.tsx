@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { format, addYears, subYears, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays } from "date-fns";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import type { CalendarViewMode, CalendarEvent } from "../../types/calendar";

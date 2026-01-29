@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  IconUsers,
   IconSearch,
   IconX,
   IconChevronDown,

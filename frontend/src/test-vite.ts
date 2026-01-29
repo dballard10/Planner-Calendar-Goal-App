@@ -1,2 +1,2 @@
-const env: ImportMetaEnv = import.meta.env;
+// Test file for Vite environment types
 export {};

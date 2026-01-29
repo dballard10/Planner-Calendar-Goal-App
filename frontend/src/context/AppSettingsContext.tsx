@@ -113,8 +113,8 @@ export function getItemTypeColor(
   return settings.itemTypeColors[type] ?? DEFAULT_ITEM_TYPE_COLORS[type];
 }
 
-// Vite specific hot module replacement
+// Vite specific hot module replacement - prevent context from being hot reloaded
 // @ts-ignore - import.meta.hot is Vite specific
 if (import.meta.hot) {
-  import.meta.hot.decline();
+  import.meta.hot.accept();
 }

@@ -18,27 +18,12 @@ interface LeftSidebarProps {
 }
 
 // Let's go with a composed Sun/Moon split icon.
-const SplitSunMoonLogo = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+const AgniFlameLogo = ({ className }: { className?: string }) => (
+  <img 
+    src="/public/logos/agni-flame-logo.png"
+    alt="Agni Flame"
     className={className}
-  >
-    {/* Sun Left */}
-    <path d="M12 5v-2" />
-    <path d="M12 21v-2" />
-    <path d="M5 12H3" />
-    <path d="M7.05 7.05L5.64 5.64" />
-    <path d="M7.05 16.95L5.64 18.36" />
-    {/* Split Circle */}
-    <path d="M12 8a4 4 0 0 0 0 8" /> {/* Left half of circle */}
-    {/* Moon Right - solid crescent shape roughly */}
-    <path d="M12 8c2.5 0 4 1.5 4 4s-1.5 4 -4 4" />
-  </svg>
+  />
 );
 
 export function LeftSidebar({
@@ -117,17 +102,17 @@ export function LeftSidebar({
             className={`flex items-center justify-center min-w-[36px] rounded-md py-1 px-1 transition-colors ${
               !isOpen ? "hover:bg-slate-800 cursor-pointer" : "cursor-default"
             }`}
-            title={!isOpen ? "Expand sidebar" : "Dawn and Dusk"}
-            aria-label={!isOpen ? "Expand sidebar" : "Dawn and Dusk"}
+            title={!isOpen ? "Expand sidebar" : "Agni"}
+            aria-label={!isOpen ? "Expand sidebar" : "Agni"}
             tabIndex={!isOpen ? 0 : -1}
           >
-            <SplitSunMoonLogo className="w-6 h-6 text-slate-100" />
+            <AgniFlameLogo className="w-6 h-6 text-slate-100" />
           </button>
           <motion.span
             animate={{ opacity: isOpen ? 1 : 0, width: isOpen ? "auto" : 0 }}
             className="ml-3 font-semibold text-slate-100 whitespace-nowrap overflow-hidden"
           >
-            Dawn and Dusk
+            Agni
           </motion.span>
         </div>
 

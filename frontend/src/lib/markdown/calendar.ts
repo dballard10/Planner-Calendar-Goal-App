@@ -18,12 +18,12 @@ import type { CalendarEvent } from "../../types/calendar";
  * This module is for independent calendar events (holidays, future planning).
  */
 
-export const calendarEventsToMarkdown = (events: CalendarEvent[]): string => {
+export const calendarEventsToMarkdown = (_events: CalendarEvent[]): string => {
   // TODO: Implement serialization
   return "";
 };
 
-export const parseCalendarMarkdown = (markdown: string): CalendarEvent[] => {
+export const parseCalendarMarkdown = (_markdown: string): CalendarEvent[] => {
   // TODO: Implement parsing
   return [];
 };

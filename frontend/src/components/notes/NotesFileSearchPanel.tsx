@@ -327,7 +327,7 @@ interface MatchLineItemProps {
   onClick: () => void;
 }
 
-function MatchLineItem({ match, query, onClick }: MatchLineItemProps) {
+function MatchLineItem({ match, onClick }: MatchLineItemProps) {
   const { lineNumber, text, matchStart, matchEnd } = match;
 
   // Truncate long lines, keeping the match visible

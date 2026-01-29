@@ -28,7 +28,7 @@ import { useAnchoredMenu } from "../shared/useAnchoredMenu";
 import { useClickOutside } from "../shared/useClickOutside";
 import { createPortal } from "react-dom";
 import type { DayClipboard, ClipboardTask } from "../../../lib/weekly/dayClipboard";
-import { buildDayClipboard, isClipboardEmpty } from "../../../lib/weekly/dayClipboard";
+import { buildDayClipboard } from "../../../lib/weekly/dayClipboard";
 
 type WeeklyClipboard = 
   | { kind: "day"; data: DayClipboard }

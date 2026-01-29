@@ -1,4 +1,4 @@
-import type { WeekState, Task } from "../../types/weekly";
+import type { WeekState } from "../../types/weekly";
 import type { CalendarEvent } from "../../types/calendar";
 import { ITEM_TYPE_STYLES } from "../itemTypeConfig";
 

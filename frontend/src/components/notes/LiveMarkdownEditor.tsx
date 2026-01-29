@@ -741,7 +741,7 @@ export function LiveMarkdownEditor({
   const taskCheckboxClickHandler = useMemo(
     () =>
       EditorView.domEventHandlers({
-        mousedown: (event, view) => {
+        mousedown: (event, _view) => {
           const target = event.target as HTMLElement;
           if (target.closest(".lp-checkbox")) {
             // Prevent editor from focusing or moving selection when clicking the checkbox

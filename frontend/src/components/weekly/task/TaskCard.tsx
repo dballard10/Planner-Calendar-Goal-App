@@ -124,32 +124,6 @@ export default function TaskCard({
     }
   };
 
-  const markdownComponents = {
-    p: ({ node, ...props }: any) => <span {...props} />,
-    strong: ({ node, ...props }: any) => (
-      <strong className="font-bold" {...props} />
-    ),
-    em: ({ node, ...props }: any) => <em className="italic" {...props} />,
-    h1: ({ node, ...props }: any) => (
-      <span className="font-bold text-lg" {...props} />
-    ),
-    h2: ({ node, ...props }: any) => (
-      <span className="font-bold text-lg" {...props} />
-    ),
-    h3: ({ node, ...props }: any) => (
-      <span className="font-bold text-lg" {...props} />
-    ),
-    h4: ({ node, ...props }: any) => (
-      <span className="font-bold text-lg" {...props} />
-    ),
-    h5: ({ node, ...props }: any) => (
-      <span className="font-bold text-lg" {...props} />
-    ),
-    h6: ({ node, ...props }: any) => (
-      <span className="font-bold text-lg" {...props} />
-    ),
-  };
-
   const type = task.type ?? "task";
   const typeStyle = ITEM_TYPE_STYLES[type] ?? ITEM_TYPE_STYLES.task;
   const showStatusSelector = !INFORMATIONAL_TYPES.includes(type);

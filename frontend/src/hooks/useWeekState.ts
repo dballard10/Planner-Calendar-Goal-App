@@ -23,6 +23,29 @@ import {
 
 const LOCAL_STORAGE_KEY = "weekly_user_data_v1";
 
+// Helper to convert API location format to TaskLocation
+function apiLocationToTaskLocation(
+  apiLocation: { name?: string; address?: string; lat?: number; lon?: number } | null | undefined
+): TaskLocation | undefined {
+  if (!apiLocation) return undefined;
+
+  const label = apiLocation.name || apiLocation.address || "";
+  if (!label) return undefined;
+
+  let mapUrl = "";
+  if (apiLocation.lat !== undefined && apiLocation.lon !== undefined) {
+    mapUrl = `https://www.openstreetmap.org/?mlat=${apiLocation.lat}&mlon=${apiLocation.lon}#map=16/${apiLocation.lat}/${apiLocation.lon}`;
+  }
+
+  return {
+    label,
+    mapUrl,
+    provider: "nominatim",
+    lat: apiLocation.lat,
+    lng: apiLocation.lon,
+  };
+}
+
 interface UserWeekData {
   tasks: Task[];
   groups: Group[];
@@ -150,7 +173,7 @@ export function useWeekState() {
         startTime: row.start_time || undefined,
         endTime: row.end_time || undefined,
         linksMarkdown: linksJsonToMarkdown(row.links),
-        location: row.location || undefined,
+        location: apiLocationToTaskLocation(row.location),
       }));
 
       // Apply recurrences to the loaded state
@@ -694,7 +717,7 @@ export function useWeekState() {
 
     // 2. Persist to backend
     // We need to find which tasks actually changed their position or assigned_date
-    const newTasks = weekState.tasks; // This is a bit risky as state might have changed, but usually fine in simple cases
+    // Note: state might have changed, but usually fine in simple cases
     // Actually, let's calculate the changes based on the same logic but find the diffs
     
     try {
@@ -813,7 +836,7 @@ export function useWeekState() {
   };
 
   const pasteDayFromClipboard = (
-    dayIndex: number,
+    _dayIndex: number,
     clipboard: DayClipboard
   ) => {
     if (!clipboard || (clipboard.tasks.length === 0 && clipboard.groups.length === 0)) {

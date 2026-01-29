@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import WeeklyView from "./components/weekly/WeeklyView/WeeklyView";
 import CalendarView from "./components/calendar/CalendarView";
 import GoalsPage from "./components/goals/GoalsPage";

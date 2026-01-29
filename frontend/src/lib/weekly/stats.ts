@@ -1,4 +1,4 @@
-import type { WeekState, Task, TaskStatus } from "../../types/weekly";
+import type { WeekState } from "../../types/weekly";
 
 export interface DayStats {
   dayIndex: number;
